@@ -1,0 +1,74 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account information and settings.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "theme": { "type": "string", "enum": ["light", "dark"] },
+            "apiKeys": { "type": "object" }
+          }
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "A potential customer found on Instagram.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "username": { "type": "string" },
+        "fullName": { "type": "string" },
+        "bio": { "type": "string" },
+        "followers": { "type": "number" },
+        "category": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "contacted", "replied", "converted", "lost"] },
+        "notes": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "username", "status"]
+    },
+    "OutreachMessage": {
+      "title": "Outreach Message",
+      "description": "AI-generated messages for leads.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "leadId": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["cold_dm", "follow_up"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "leadId", "content"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile data."
+    },
+    "/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Lead CRM data."
+    },
+    "/messages/{messageId}": {
+      "schema": "OutreachMessage",
+      "description": "History of generated messages."
+    }
+  }
+}
