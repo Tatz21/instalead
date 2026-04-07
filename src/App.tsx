@@ -11,20 +11,23 @@ import {
   LayoutDashboard, Users, Search, PenTool, Settings, 
   LogOut, Mail, Lock, Github, Chrome, Plus, Filter, 
   ArrowRight, CheckCircle2, MessageSquare, TrendingUp,
-  Instagram, Copy, RefreshCw, Trash2, Save, MessageCircle, Send
+  Instagram, Copy, RefreshCw, Trash2, Save, MessageCircle, Send,
+  ChevronRight, MoreHorizontal, CheckSquare, Square, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
 import { auth, db, googleProvider } from './lib/firebase';
 import { cn, formatNumber } from './lib/utils';
-import { Lead, LeadStatus, OutreachMessage, UserProfile } from './types';
+import { Lead, LeadStatus, OutreachMessage, UserProfile, Task } from './types';
 import { instagramService } from './services/instagramService';
 import { generateOutreachMessage } from './services/aiService';
 
 import Layout from './components/Layout';
 import StatsCard from './components/StatsCard';
 import LeadCard from './components/LeadCard';
+import LandingPage from './components/LandingPage';
+import LeadDetailsModal from './components/LeadDetailsModal';
 
 // --- Auth Screen ---
 function AuthScreen() {
@@ -106,7 +109,7 @@ function AuthScreen() {
 }
 
 // --- Dashboard Screen ---
-function DashboardScreen({ leads }: { leads: Lead[] }) {
+function DashboardScreen({ leads, tasks }: { leads: Lead[], tasks: Task[] }) {
   const stats = [
     { label: 'Total Leads', value: leads.length, icon: Users, trend: '+12%', trendUp: true },
     { label: 'Messages Sent', value: leads.filter(l => l.status !== 'new').length, icon: MessageSquare, trend: '+5%', trendUp: true },
@@ -153,22 +156,48 @@ function DashboardScreen({ leads }: { leads: Lead[] }) {
           </div>
         </div>
 
-        <div className="space-y-4">
-          <h3 className="text-xl font-bold">Quick Actions</h3>
-          <div className="space-y-3">
-            {[
-              { label: 'Find New Leads', icon: Search, color: 'bg-blue-500' },
-              { label: 'Generate AI Message', icon: PenTool, color: 'bg-purple-500' },
-              { label: 'Export CRM (CSV)', icon: Github, color: 'bg-gray-500' },
-            ].map((action) => (
-              <button key={action.label} className="w-full flex items-center gap-4 p-4 bg-card border border-border rounded-2xl hover:bg-accent transition-colors group">
-                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-white", action.color)}>
-                  <action.icon className="w-5 h-5" />
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold flex items-center gap-2">
+              <Clock className="w-5 h-5 text-yellow-500" />
+              Upcoming Tasks
+            </h3>
+            <div className="space-y-3">
+              {tasks.slice(0, 5).map((task) => (
+                <div key={task.id} className="p-4 bg-card border border-border rounded-2xl flex items-center gap-3 group">
+                  <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold truncate">{task.title}</p>
+                    <p className="text-[10px] text-muted-foreground">{new Date(task.dueDate).toLocaleDateString()}</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
                 </div>
-                <span className="font-bold flex-1 text-left">{action.label}</span>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-              </button>
-            ))}
+              ))}
+              {tasks.length === 0 && (
+                <div className="p-8 text-center bg-accent/20 rounded-2xl border border-dashed border-border">
+                  <CheckCircle2 className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-20" />
+                  <p className="text-xs text-muted-foreground">All caught up!</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold">Quick Actions</h3>
+            <div className="space-y-3">
+              {[
+                { label: 'Find New Leads', icon: Search, color: 'bg-blue-500' },
+                { label: 'Generate AI Message', icon: PenTool, color: 'bg-purple-500' },
+              ].map((action) => (
+                <button key={action.label} className="w-full flex items-center gap-4 p-4 bg-card border border-border rounded-2xl hover:bg-accent transition-colors group">
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-white", action.color)}>
+                    <action.icon className="w-5 h-5" />
+                  </div>
+                  <span className="font-bold flex-1 text-left">{action.label}</span>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -268,10 +297,55 @@ function FinderScreen({ onSaveLead, savedUsernames }: { onSaveLead: (lead: Parti
 }
 
 // --- Leads Screen ---
-function LeadsScreen({ leads, onUpdateStatus, onDeleteLead }: { leads: Lead[], onUpdateStatus: (id: string, status: LeadStatus) => void, onDeleteLead: (id: string) => void }) {
+function LeadsScreen({ 
+  leads, 
+  onUpdateStatus, 
+  onDeleteLead, 
+  onSelectLead,
+  businessType,
+  offer
+}: { 
+  leads: Lead[], 
+  onUpdateStatus: (id: string, status: LeadStatus) => void, 
+  onDeleteLead: (id: string) => void,
+  onSelectLead: (lead: Lead) => void,
+  businessType: string,
+  offer: string
+}) {
   const [filter, setFilter] = useState<LeadStatus | 'all'>('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const filteredLeads = filter === 'all' ? leads : leads.filter(l => l.status === filter);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredLeads.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredLeads.map(l => l.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkDelete = () => {
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.size} leads?`)) {
+      selectedIds.forEach(id => onDeleteLead(id));
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleBulkStatusUpdate = (status: LeadStatus) => {
+    selectedIds.forEach(id => onUpdateStatus(id, status));
+    setSelectedIds(new Set());
+  };
 
   return (
     <div className="space-y-8">
@@ -296,21 +370,143 @@ function LeadsScreen({ leads, onUpdateStatus, onDeleteLead }: { leads: Lead[], o
         </div>
       </header>
 
+      {selectedIds.size > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4"
+        >
+          <p className="text-sm font-bold text-primary">{selectedIds.size} leads selected</p>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <select 
+              onChange={(e) => handleBulkStatusUpdate(e.target.value as LeadStatus)}
+              className="flex-1 sm:flex-none bg-background border border-border rounded-xl px-3 py-2 text-xs font-bold outline-none"
+              defaultValue=""
+            >
+              <option value="" disabled>Update Status</option>
+              <option value="new">NEW</option>
+              <option value="contacted">CONTACTED</option>
+              <option value="replied">REPLIED</option>
+              <option value="converted">CONVERTED</option>
+              <option value="lost">LOST</option>
+            </select>
+            <button 
+              onClick={handleBulkDelete}
+              className="flex-1 sm:flex-none px-4 py-2 bg-destructive text-destructive-foreground rounded-xl text-xs font-bold hover:bg-destructive/90 transition-all"
+            >
+              Delete Selected
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
+        {/* Mobile View: Cards */}
+        <div className="md:hidden divide-y divide-border">
+          {filteredLeads.map((lead) => (
+            <div 
+              key={lead.id} 
+              className={cn(
+                "p-4 space-y-4 transition-colors active:bg-accent/20",
+                selectedIds.has(lead.id) && "bg-primary/5"
+              )}
+              onClick={() => onSelectLead(lead)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); toggleSelect(lead.id); }}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {selectedIds.has(lead.id) ? <CheckSquare className="w-5 h-5 text-primary" /> : <Square className="w-5 h-5" />}
+                  </button>
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">@{lead.username}</p>
+                    <p className="text-[10px] text-muted-foreground">{new Date(lead.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                {lead.aiScore !== undefined && (
+                  <div className={cn(
+                    "w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold",
+                    lead.aiScore > 70 ? "bg-green-500/10 text-green-500" : 
+                    lead.aiScore > 40 ? "bg-yellow-500/10 text-yellow-500" : "bg-red-500/10 text-red-500"
+                  )}>
+                    {lead.aiScore}
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex items-center justify-between gap-2">
+                <select 
+                  value={lead.status}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => onUpdateStatus(lead.id, e.target.value as LeadStatus)}
+                  className={cn(
+                    "text-[10px] font-bold px-3 py-1.5 rounded-lg outline-none cursor-pointer border border-transparent",
+                    lead.status === 'new' && "bg-blue-500/10 text-blue-500",
+                    lead.status === 'contacted' && "bg-yellow-500/10 text-yellow-500",
+                    lead.status === 'replied' && "bg-purple-500/10 text-purple-500",
+                    lead.status === 'converted' && "bg-green-500/10 text-green-500",
+                    lead.status === 'lost' && "bg-red-500/10 text-red-500",
+                  )}
+                >
+                  <option value="new">NEW</option>
+                  <option value="contacted">CONTACTED</option>
+                  <option value="replied">REPLIED</option>
+                  <option value="converted">CONVERTED</option>
+                  <option value="lost">LOST</option>
+                </select>
+                
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onSelectLead(lead); }}
+                    className="p-2 bg-accent rounded-lg text-muted-foreground"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onDeleteLead(lead.id); }}
+                    className="p-2 bg-destructive/10 text-destructive rounded-lg"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border bg-accent/30">
+                <th className="p-4 w-10">
+                  <button onClick={toggleSelectAll} className="text-muted-foreground hover:text-primary transition-colors">
+                    {selectedIds.size === filteredLeads.length && filteredLeads.length > 0 ? <CheckSquare className="w-5 h-5 text-primary" /> : <Square className="w-5 h-5" />}
+                  </button>
+                </th>
                 <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Username</th>
                 <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
-                <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Followers</th>
+                <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">AI Score</th>
                 <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Added</th>
                 <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filteredLeads.map((lead) => (
-                <tr key={lead.id} className="hover:bg-accent/20 transition-colors group">
+                <tr key={lead.id} className={cn(
+                  "hover:bg-accent/20 transition-colors group cursor-pointer",
+                  selectedIds.has(lead.id) && "bg-primary/5"
+                )} onClick={() => onSelectLead(lead)}>
+                  <td className="p-4" onClick={(e) => { e.stopPropagation(); toggleSelect(lead.id); }}>
+                    <button className="text-muted-foreground hover:text-primary transition-colors">
+                      {selectedIds.has(lead.id) ? <CheckSquare className="w-5 h-5 text-primary" /> : <Square className="w-5 h-5" />}
+                    </button>
+                  </td>
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
@@ -319,7 +515,7 @@ function LeadsScreen({ leads, onUpdateStatus, onDeleteLead }: { leads: Lead[], o
                       <span className="font-bold">@{lead.username}</span>
                     </div>
                   </td>
-                  <td className="p-4">
+                  <td className="p-4" onClick={(e) => e.stopPropagation()}>
                     <select 
                       value={lead.status}
                       onChange={(e) => onUpdateStatus(lead.id, e.target.value as LeadStatus)}
@@ -339,14 +535,29 @@ function LeadsScreen({ leads, onUpdateStatus, onDeleteLead }: { leads: Lead[], o
                       <option value="lost">LOST</option>
                     </select>
                   </td>
-                  <td className="p-4 text-sm font-medium">{formatNumber(lead.followers)}</td>
+                  <td className="p-4">
+                    {lead.aiScore !== undefined ? (
+                      <div className={cn(
+                        "inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-bold",
+                        lead.aiScore > 70 ? "bg-green-500/10 text-green-500" : 
+                        lead.aiScore > 40 ? "bg-yellow-500/10 text-yellow-500" : "bg-red-500/10 text-red-500"
+                      )}>
+                        {lead.aiScore}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">N/A</span>
+                    )}
+                  </td>
                   <td className="p-4 text-sm text-muted-foreground">
                     {new Date(lead.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="p-4 text-right">
+                  <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary">
-                        <PenTool className="w-4 h-4" />
+                      <button 
+                        onClick={() => onSelectLead(lead)}
+                        className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary"
+                      >
+                        <ChevronRight className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => onDeleteLead(lead.id)}
@@ -373,18 +584,40 @@ function LeadsScreen({ leads, onUpdateStatus, onDeleteLead }: { leads: Lead[], o
 }
 
 // --- AI Writer Screen ---
-function AIWriterScreen() {
-  const [businessType, setBusinessType] = useState('');
-  const [offer, setOffer] = useState('');
+function AIWriterScreen({ user, businessProfile }: { user: FirebaseUser, businessProfile: { businessType: string, offer: string } }) {
+  const [businessType, setBusinessType] = useState(businessProfile.businessType);
+  const [offer, setOffer] = useState(businessProfile.offer);
   const [tone, setTone] = useState('casual');
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [messages, setMessages] = useState<{ cold_dm: string, follow_up: string } | null>(null);
+
+  useEffect(() => {
+    setBusinessType(businessProfile.businessType);
+    setOffer(businessProfile.offer);
+  }, [businessProfile]);
+
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    try {
+      await setDoc(doc(db, 'profiles', user.uid), {
+        businessType,
+        offer,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!businessType || !offer) return;
     setLoading(true);
     try {
+      await handleSaveProfile();
       const result = await generateOutreachMessage(businessType, offer, tone);
       setMessages(result);
     } catch (error) {
@@ -684,10 +917,15 @@ export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [showLanding, setShowLanding] = useState(true);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [businessProfile, setBusinessProfile] = useState({ businessType: '', offer: '' });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
+      if (u) setShowLanding(false);
       setLoading(false);
     });
     return () => unsubscribe();
@@ -695,12 +933,35 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const qLeads = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
+    const unsubLeads = onSnapshot(qLeads, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Lead[];
       setLeads(data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     });
-    return () => unsubscribe();
+
+    const qTasks = query(collection(db, 'tasks'), where('ownerId', '==', user.uid), where('completed', '==', false));
+    const unsubTasks = onSnapshot(qTasks, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Task[];
+      setTasks(data.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+    });
+
+    // Fetch business profile
+    const profileRef = doc(db, 'profiles', user.uid);
+    const unsubProfile = onSnapshot(profileRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setBusinessProfile({
+          businessType: data.businessType || '',
+          offer: data.offer || ''
+        });
+      }
+    });
+
+    return () => {
+      unsubLeads();
+      unsubTasks();
+      unsubProfile();
+    };
   }, [user]);
 
   const handleSaveLead = async (leadData: Partial<Lead>) => {
@@ -731,7 +992,6 @@ export default function App() {
   };
 
   const handleDeleteLead = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this lead?')) return;
     try {
       await deleteDoc(doc(db, 'leads', id));
     } catch (error) {
@@ -747,6 +1007,10 @@ export default function App() {
     );
   }
 
+  if (showLanding && !user) {
+    return <LandingPage onGetStarted={() => setShowLanding(false)} />;
+  }
+
   if (!user) {
     return <AuthScreen />;
   }
@@ -757,15 +1021,42 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/" element={<DashboardScreen leads={leads} />} />
-          <Route path="/leads" element={<LeadsScreen leads={leads} onUpdateStatus={handleUpdateStatus} onDeleteLead={handleDeleteLead} />} />
+          <Route path="/" element={<DashboardScreen leads={leads} tasks={tasks} />} />
+          <Route path="/leads" element={
+            <LeadsScreen 
+              leads={leads} 
+              onUpdateStatus={handleUpdateStatus} 
+              onDeleteLead={handleDeleteLead}
+              onSelectLead={setSelectedLead}
+              businessType={businessProfile.businessType}
+              offer={businessProfile.offer}
+            />
+          } />
           <Route path="/finder" element={<FinderScreen onSaveLead={handleSaveLead} savedUsernames={savedUsernames} />} />
-          <Route path="/ai-writer" element={<AIWriterScreen />} />
+          <Route path="/ai-writer" element={<AIWriterScreen user={user} businessProfile={businessProfile} />} />
           <Route path="/chat" element={<ChatScreen />} />
           <Route path="/settings" element={<SettingsScreen user={user} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
+
+      <AnimatePresence>
+        {selectedLead && (
+          <LeadDetailsModal 
+            lead={selectedLead}
+            onClose={() => setSelectedLead(null)}
+            onUpdateStatus={handleUpdateStatus}
+            onDelete={(id) => {
+              if (window.confirm('Are you sure you want to delete this lead?')) {
+                handleDeleteLead(id);
+                setSelectedLead(null);
+              }
+            }}
+            businessType={businessProfile.businessType}
+            offer={businessProfile.offer}
+          />
+        )}
+      </AnimatePresence>
     </BrowserRouter>
   );
 }

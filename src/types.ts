@@ -12,8 +12,20 @@ export interface Lead {
   status: LeadStatus;
   notes?: string;
   tags: string[];
+  aiScore?: number;
+  aiReasoning?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Task {
+  id: string;
+  ownerId: string;
+  leadId: string;
+  title: string;
+  dueDate: string;
+  completed: boolean;
+  createdAt: string;
 }
 
 export interface UserProfile {
