@@ -12,7 +12,8 @@ import {
   LogOut, Mail, Lock, Github, Chrome, Plus, Filter, 
   ArrowRight, CheckCircle2, MessageSquare, TrendingUp,
   Instagram, Copy, RefreshCw, Trash2, Save, MessageCircle, Send,
-  ChevronRight, MoreHorizontal, CheckSquare, Square, Clock, Zap, X, Tag
+  ChevronRight, MoreHorizontal, CheckSquare, Square, Clock, Zap, X, Tag,
+  MapPin, LayoutGrid, List, Globe, Phone, Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
@@ -22,7 +23,7 @@ import Papa from 'papaparse';
 import { auth, db, googleProvider } from './lib/firebase';
 import { cn, formatNumber } from './lib/utils';
 import { Lead, LeadStatus, OutreachMessage, UserProfile, Task, AutomationRule } from './types';
-import { instagramService } from './services/instagramService';
+import { googleMapsService } from './services/googleMapsService';
 import { generateOutreachMessage, scoreLead } from './services/aiService';
 
 import Layout from './components/Layout';
@@ -53,10 +54,10 @@ function AuthScreen() {
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
           <div className="w-16 h-16 rounded-2xl bg-primary mx-auto mb-4 flex items-center justify-center shadow-2xl shadow-primary/40">
-            <Search className="text-primary-foreground w-8 h-8" />
+            <MapPin className="text-primary-foreground w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-display font-bold tracking-tight mb-2">InstaLead AI</h1>
-          <p className="text-muted-foreground">The ultimate Instagram lead generation tool</p>
+          <h1 className="text-3xl font-display font-bold tracking-tight mb-2">GoogleLead AI</h1>
+          <p className="text-muted-foreground">The ultimate Google Maps lead generation tool</p>
         </div>
 
         <div className="bg-card border border-border rounded-3xl p-8 shadow-xl">
@@ -209,23 +210,42 @@ function DashboardScreen({ leads, tasks, onSelectLead }: { leads: Lead[], tasks:
 }
 
 // --- Finder Screen ---
-function FinderScreen({ onSaveLead, savedUsernames }: { onSaveLead: (lead: Partial<Lead>) => void, savedUsernames: Set<string> }) {
+function FinderScreen({ onSaveLead, savedNames }: { onSaveLead: (lead: Partial<Lead>) => void, savedNames: Set<string> }) {
   const [keyword, setKeyword] = useState('');
   const [location, setLocation] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [results, setResults] = useState<Partial<Lead>[]>([]);
+  const [page, setPage] = useState(1);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!keyword) return;
     setLoading(true);
+    setPage(1);
     try {
-      const data = await instagramService.searchLeads(keyword, location, [0, 1000000]);
+      const data = await googleMapsService.searchLeads(keyword, location, 1);
       setResults(data);
     } catch (error) {
       console.error(error);
+      toast.error('Search failed. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    try {
+      const data = await googleMapsService.searchLeads(keyword, location, nextPage);
+      setResults(prev => [...prev, ...data]);
+      setPage(nextPage);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load more leads.');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -233,7 +253,7 @@ function FinderScreen({ onSaveLead, savedUsernames }: { onSaveLead: (lead: Parti
     <div className="space-y-8" data-tour="finder">
       <header>
         <h2 className="text-3xl font-display font-bold tracking-tight">Lead Finder</h2>
-        <p className="text-muted-foreground">Search Instagram for potential business leads.</p>
+        <p className="text-muted-foreground">Search Google Maps for potential business leads.</p>
       </header>
 
       <form onSubmit={handleSearch} className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-4">
@@ -273,24 +293,40 @@ function FinderScreen({ onSaveLead, savedUsernames }: { onSaveLead: (lead: Parti
         </button>
       </form>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {results.map((lead, i) => (
-          <motion.div
-            key={lead.username}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.05 }}
-          >
-            <LeadCard 
-              lead={lead} 
-              onSave={() => onSaveLead(lead)} 
-              isSaved={savedUsernames.has(lead.username!)}
-            />
-          </motion.div>
-        ))}
+      <div className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {results.map((lead, i) => (
+            <motion.div
+              key={`${lead.name}-${i}`}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: (i % 20) * 0.05 }}
+            >
+              <LeadCard 
+                lead={lead} 
+                onSave={() => onSaveLead(lead)} 
+                isSaved={savedNames.has(lead.name!)}
+              />
+            </motion.div>
+          ))}
+        </div>
+
+        {results.length > 0 && (
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="px-8 py-3 bg-accent hover:bg-accent/80 text-foreground rounded-xl font-bold transition-all flex items-center gap-2"
+            >
+              {loadingMore ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+              {loadingMore ? 'Loading More...' : 'Load More Leads'}
+            </button>
+          </div>
+        )}
+
         {results.length === 0 && !loading && (
-          <div className="col-span-full py-20 text-center">
-            <Instagram className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-10" />
+          <div className="py-20 text-center">
+            <MapPin className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-10" />
             <p className="text-muted-foreground">Search results will appear here</p>
           </div>
         )}
@@ -321,6 +357,12 @@ function LeadsScreen({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
   const [messagingBulk, setMessagingBulk] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'score' | 'followers'>('date');
+  const [scoringBulk, setScoringBulk] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const [showTagInput, setShowTagInput] = useState(false);
 
   const handleImportLeads = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -335,16 +377,17 @@ function LeadsScreen({
           const newLeads = results.data as any[];
           let count = 0;
           for (const leadData of newLeads) {
-            if (!leadData.username) continue;
+            if (!leadData.name) continue;
             
             await addDoc(collection(db, 'leads'), {
               ownerId: user.uid,
-              username: leadData.username,
-              fullName: leadData.fullName || '',
-              bio: leadData.bio || '',
-              followers: parseInt(leadData.followers) || 0,
+              name: leadData.name,
+              address: leadData.address || '',
+              phoneNumber: leadData.phoneNumber || '',
+              website: leadData.website || '',
+              rating: parseFloat(leadData.rating) || 0,
+              userRatingsTotal: parseInt(leadData.userRatingsTotal) || 0,
               category: leadData.category || '',
-              contactEmail: leadData.contactEmail || '',
               status: 'new',
               tags: leadData.tags ? leadData.tags.split(',').map((t: string) => t.trim()) : [],
               createdAt: new Date().toISOString(),
@@ -372,7 +415,7 @@ function LeadsScreen({
     try {
       const selectedLeads = leads.filter(l => selectedIds.has(l.id));
       for (const lead of selectedLeads) {
-        const result = await generateOutreachMessage(lead.username, lead.bio || '', businessType, offer, 'casual');
+        const result = await generateOutreachMessage(businessType, offer, 'professional', lead.name, lead.category);
         await addDoc(collection(db, 'messages'), {
           ownerId: user.uid,
           leadId: lead.id,
@@ -395,13 +438,14 @@ function LeadsScreen({
     .filter(l => filter === 'all' ? true : l.status === filter)
     .filter(l => {
       const query = searchQuery.toLowerCase();
-      return l.username.toLowerCase().includes(query) || 
-             (l.fullName && l.fullName.toLowerCase().includes(query)) ||
+      return l.name.toLowerCase().includes(query) || 
+             l.address.toLowerCase().includes(query) ||
+             (l.category && l.category.toLowerCase().includes(query)) ||
              (l.tags && l.tags.some(t => t.toLowerCase().includes(query)));
     })
     .sort((a, b) => {
       if (sortBy === 'score') return (b.aiScore || 0) - (a.aiScore || 0);
-      if (sortBy === 'followers') return (b.followers || 0) - (a.followers || 0);
+      if (sortBy === 'followers') return (b.userRatingsTotal || 0) - (a.userRatingsTotal || 0);
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
@@ -435,12 +479,6 @@ function LeadsScreen({
     setSelectedIds(new Set());
   };
 
-  const [scoringBulk, setScoringBulk] = useState(false);
-  const [tagInput, setTagInput] = useState('');
-  const [showTagInput, setShowTagInput] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'date' | 'score' | 'followers'>('date');
-
   const handleBulkTag = async () => {
     if (!tagInput) return;
     try {
@@ -468,7 +506,14 @@ function LeadsScreen({
     try {
       const selectedLeads = leads.filter(l => selectedIds.has(l.id));
       for (const lead of selectedLeads) {
-        const result = await scoreLead(lead.username, lead.bio || '', lead.followers, businessType, offer);
+        const result = await scoreLead(
+          lead.name, 
+          lead.category || '', 
+          lead.rating || 0, 
+          lead.userRatingsTotal || 0,
+          businessType, 
+          offer
+        );
         await updateDoc(doc(db, 'leads', lead.id), {
           aiScore: result.score,
           aiReasoning: result.reasoning,
@@ -491,6 +536,26 @@ function LeadsScreen({
           <p className="text-muted-foreground">Manage and track your outreach progress.</p>
         </div>
         <div className="flex items-center gap-3">
+          <div className="flex items-center bg-card border border-border rounded-xl p-1 mr-2">
+            <button 
+              onClick={() => setViewMode('table')}
+              className={cn(
+                "p-1.5 rounded-lg transition-all",
+                viewMode === 'table' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setViewMode('grid')}
+              className={cn(
+                "p-1.5 rounded-lg transition-all",
+                viewMode === 'grid' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
           <label className="cursor-pointer px-4 py-2 bg-accent text-accent-foreground rounded-xl text-xs font-bold hover:bg-accent/80 transition-all flex items-center gap-2">
             <Plus className="w-3 h-3" />
             {importing ? 'Importing...' : 'Import CSV'}
@@ -519,7 +584,7 @@ function LeadsScreen({
           <input 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by username, name or tag..." 
+            placeholder="Search by name, address or tag..." 
             className="w-full bg-card border border-border rounded-xl py-2.5 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary transition-all" 
           />
         </div>
@@ -532,7 +597,7 @@ function LeadsScreen({
           >
             <option value="date">Date Added</option>
             <option value="score">AI Score</option>
-            <option value="followers">Followers</option>
+            <option value="followers">Reviews</option>
           </select>
         </div>
       </div>
@@ -634,10 +699,11 @@ function LeadsScreen({
                     {selectedIds.has(lead.id) ? <CheckSquare className="w-5 h-5 text-primary" /> : <Square className="w-5 h-5" />}
                   </button>
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                    <Users className="w-5 h-5" />
+                    <MapPin className="w-5 h-5" />
                   </div>
-                  <div>
-                    <p className="font-bold text-sm">@{lead.username}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm truncate">{lead.name}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{lead.address}</p>
                     <p className="text-[10px] text-muted-foreground">{new Date(lead.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
@@ -692,53 +758,171 @@ function LeadsScreen({
           ))}
         </div>
 
-        {/* Desktop View: Table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-border bg-accent/30">
-                <th className="p-4 w-10">
-                  <button onClick={toggleSelectAll} className="text-muted-foreground hover:text-primary transition-colors">
-                    {selectedIds.size === filteredLeads.length && filteredLeads.length > 0 ? <CheckSquare className="w-5 h-5 text-primary" /> : <Square className="w-5 h-5" />}
-                  </button>
-                </th>
-                <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Username</th>
-                <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
-                <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">AI Score</th>
-                <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Added</th>
-                <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredLeads.map((lead) => (
-                <tr key={lead.id} className={cn(
-                  "hover:bg-accent/20 transition-colors group cursor-pointer",
-                  selectedIds.has(lead.id) && "bg-primary/5"
-                )} onClick={() => onSelectLead(lead)}>
-                  <td className="p-4" onClick={(e) => { e.stopPropagation(); toggleSelect(lead.id); }}>
-                    <button className="text-muted-foreground hover:text-primary transition-colors">
+      {/* Desktop View: Table/Grid */}
+      <div className="hidden md:block">
+        {viewMode === 'table' ? (
+          <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-border bg-accent/30">
+                    <th className="p-4 w-10">
+                      <button onClick={toggleSelectAll} className="text-muted-foreground hover:text-primary transition-colors">
+                        {selectedIds.size === filteredLeads.length && filteredLeads.length > 0 ? <CheckSquare className="w-5 h-5 text-primary" /> : <Square className="w-5 h-5" />}
+                      </button>
+                    </th>
+                    <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Business Name</th>
+                    <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Contact</th>
+                    <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Rating</th>
+                    <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                    <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">AI Score</th>
+                    <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Added</th>
+                    <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filteredLeads.map((lead) => (
+                    <tr key={lead.id} className={cn(
+                      "hover:bg-accent/20 transition-colors group cursor-pointer",
+                      selectedIds.has(lead.id) && "bg-primary/5"
+                    )} onClick={() => onSelectLead(lead)}>
+                      <td className="p-4" onClick={(e) => { e.stopPropagation(); toggleSelect(lead.id); }}>
+                        <button className="text-muted-foreground hover:text-primary transition-colors">
+                          {selectedIds.has(lead.id) ? <CheckSquare className="w-5 h-5 text-primary" /> : <Square className="w-5 h-5" />}
+                        </button>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <MapPin className="w-4 h-4" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-bold truncate max-w-[150px]">{lead.name}</span>
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">{lead.address}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-col gap-1">
+                          {lead.phoneNumber && (
+                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                              <Phone className="w-3 h-3" />
+                              {lead.phoneNumber}
+                            </div>
+                          )}
+                          {lead.website && (
+                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                              <Globe className="w-3 h-3" />
+                              <span className="truncate max-w-[100px]">{lead.website.replace(/^https?:\/\/(www\.)?/, '')}</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-1 text-xs font-bold">
+                          <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                          {lead.rating || 'N/A'}
+                          <span className="text-[10px] text-muted-foreground font-normal">({lead.userRatingsTotal || 0})</span>
+                        </div>
+                      </td>
+                      <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                        <select 
+                          value={lead.status}
+                          onChange={(e) => onUpdateStatus(lead.id, e.target.value as LeadStatus)}
+                          className={cn(
+                            "text-[10px] font-bold px-2 py-1 rounded-lg outline-none cursor-pointer",
+                            lead.status === 'new' && "bg-blue-500/10 text-blue-500",
+                            lead.status === 'contacted' && "bg-yellow-500/10 text-yellow-500",
+                            lead.status === 'replied' && "bg-purple-500/10 text-purple-500",
+                            lead.status === 'converted' && "bg-green-500/10 text-green-500",
+                            lead.status === 'lost' && "bg-red-500/10 text-red-500",
+                          )}
+                        >
+                          <option value="new">NEW</option>
+                          <option value="contacted">CONTACTED</option>
+                          <option value="replied">REPLIED</option>
+                          <option value="converted">CONVERTED</option>
+                          <option value="lost">LOST</option>
+                        </select>
+                      </td>
+                      <td className="p-4">
+                        {lead.aiScore !== undefined ? (
+                          <div className={cn(
+                            "inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-bold",
+                            lead.aiScore > 70 ? "bg-green-500/10 text-green-500" : 
+                            lead.aiScore > 40 ? "bg-yellow-500/10 text-yellow-500" : "bg-red-500/10 text-red-500"
+                          )}>
+                            {lead.aiScore}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">N/A</span>
+                        )}
+                      </td>
+                      <td className="p-4 text-sm text-muted-foreground">
+                        {new Date(lead.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          <button 
+                            onClick={() => onSelectLead(lead)}
+                            className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => onDeleteLead(lead.id)}
+                            className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredLeads.length === 0 && (
+                <div className="py-20 text-center">
+                  <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-10" />
+                  <p className="text-muted-foreground">No leads found in this category</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredLeads.map((lead, i) => (
+              <motion.div
+                key={lead.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.05 }}
+              >
+                <div className="relative group">
+                  <div className="absolute top-4 left-4 z-10" onClick={(e) => e.stopPropagation()}>
+                    <button 
+                      onClick={() => toggleSelect(lead.id)}
+                      className="text-muted-foreground hover:text-primary transition-colors bg-background/80 backdrop-blur-sm rounded-lg p-1"
+                    >
                       {selectedIds.has(lead.id) ? <CheckSquare className="w-5 h-5 text-primary" /> : <Square className="w-5 h-5" />}
                     </button>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                        <Users className="w-4 h-4" />
-                      </div>
-                      <span className="font-bold">@{lead.username}</span>
-                    </div>
-                  </td>
-                  <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                  </div>
+                  <LeadCard 
+                    lead={lead} 
+                    onView={() => onSelectLead(lead)}
+                  />
+                  <div className="absolute bottom-4 right-4 flex items-center gap-2">
                     <select 
                       value={lead.status}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) => onUpdateStatus(lead.id, e.target.value as LeadStatus)}
                       className={cn(
-                        "text-[10px] font-bold px-2 py-1 rounded-lg outline-none cursor-pointer",
-                        lead.status === 'new' && "bg-blue-500/10 text-blue-500",
-                        lead.status === 'contacted' && "bg-yellow-500/10 text-yellow-500",
-                        lead.status === 'replied' && "bg-purple-500/10 text-purple-500",
-                        lead.status === 'converted' && "bg-green-500/10 text-green-500",
-                        lead.status === 'lost' && "bg-red-500/10 text-red-500",
+                        "text-[10px] font-bold px-2 py-1 rounded-lg outline-none cursor-pointer border border-transparent shadow-sm",
+                        lead.status === 'new' && "bg-blue-500 text-white",
+                        lead.status === 'contacted' && "bg-yellow-500 text-white",
+                        lead.status === 'replied' && "bg-purple-500 text-white",
+                        lead.status === 'converted' && "bg-green-500 text-white",
+                        lead.status === 'lost' && "bg-red-500 text-white",
                       )}
                     >
                       <option value="new">NEW</option>
@@ -747,50 +931,19 @@ function LeadsScreen({
                       <option value="converted">CONVERTED</option>
                       <option value="lost">LOST</option>
                     </select>
-                  </td>
-                  <td className="p-4">
-                    {lead.aiScore !== undefined ? (
-                      <div className={cn(
-                        "inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-bold",
-                        lead.aiScore > 70 ? "bg-green-500/10 text-green-500" : 
-                        lead.aiScore > 40 ? "bg-yellow-500/10 text-yellow-500" : "bg-red-500/10 text-red-500"
-                      )}>
-                        {lead.aiScore}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground italic">N/A</span>
-                    )}
-                  </td>
-                  <td className="p-4 text-sm text-muted-foreground">
-                    {new Date(lead.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-end gap-2">
-                      <button 
-                        onClick={() => onSelectLead(lead)}
-                        className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => onDeleteLead(lead.id)}
-                        className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filteredLeads.length === 0 && (
-            <div className="py-20 text-center">
-              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-10" />
-              <p className="text-muted-foreground">No leads found in this category</p>
-            </div>
-          )}
-        </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+            {filteredLeads.length === 0 && (
+              <div className="col-span-full py-20 text-center">
+                <MapPin className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-10" />
+                <p className="text-muted-foreground">No leads found in this category</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       </div>
     </div>
   );
@@ -1363,9 +1516,10 @@ export default function App() {
       if (businessProfile.businessType && businessProfile.offer) {
         try {
           const result = await scoreLead(
-            leadData.username!, 
-            leadData.bio || '', 
-            leadData.followers || 0, 
+            leadData.name!, 
+            leadData.category || '', 
+            leadData.rating || 0, 
+            leadData.userRatingsTotal || 0,
             businessProfile.businessType, 
             businessProfile.offer
           );
@@ -1449,7 +1603,7 @@ export default function App() {
     return <AuthScreen />;
   }
 
-  const savedUsernames = new Set(leads.map(l => l.username));
+  const savedNames = new Set(leads.map(l => l.name));
 
   return (
     <BrowserRouter>
@@ -1473,7 +1627,7 @@ export default function App() {
               user={user}
             />
           } />
-          <Route path="/finder" element={<FinderScreen onSaveLead={handleSaveLead} savedUsernames={savedUsernames} />} />
+          <Route path="/finder" element={<FinderScreen onSaveLead={handleSaveLead} savedNames={savedNames} />} />
           <Route path="/ai-writer" element={<AIWriterScreen user={user} businessProfile={businessProfile} />} />
           <Route path="/chat" element={<ChatScreen />} />
           <Route path="/settings" element={<SettingsScreen user={user} rules={automationRules} />} />

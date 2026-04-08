@@ -1,7 +1,8 @@
 import React from 'react';
-import { User, Instagram, Mail, Tag, MoreVertical, ExternalLink } from 'lucide-react';
+import { User, MapPin, Phone, Globe, Star, MoreVertical, ExternalLink, Copy, MessageSquare } from 'lucide-react';
 import { Lead } from '../types';
 import { cn } from '../lib/utils';
+import { toast } from 'sonner';
 
 interface LeadCardProps {
   lead: Partial<Lead>;
@@ -11,19 +12,36 @@ interface LeadCardProps {
 }
 
 export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProps) {
+  const copyToClipboard = (e: React.MouseEvent, text: string, label: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard`);
+  };
+
   return (
-    <div className="glass-dark rounded-2xl p-5 hover:border-primary/50 transition-all duration-300 group">
+    <div 
+      className="glass-dark rounded-2xl p-5 hover:border-primary/50 transition-all duration-300 group cursor-pointer"
+      onClick={onView}
+    >
       <div className="flex justify-between items-start mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center overflow-hidden border border-border">
-            <User className="w-6 h-6 text-muted-foreground" />
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center overflow-hidden border border-border shrink-0">
+            <MapPin className="w-6 h-6 text-muted-foreground" />
           </div>
-          <div>
-            <h3 className="font-bold text-foreground flex items-center gap-1">
-              @{lead.username}
+          <div className="min-w-0">
+            <h3 className="font-bold text-foreground flex items-center gap-1 truncate">
+              {lead.name}
               <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </h3>
-            <p className="text-xs text-muted-foreground">{lead.fullName}</p>
+            <div className="flex items-center gap-1 min-w-0">
+              <p className="text-[10px] text-muted-foreground truncate">{lead.address}</p>
+              <button 
+                onClick={(e) => copyToClipboard(e, lead.address || '', 'Address')}
+                className="p-1 hover:bg-accent rounded transition-colors opacity-0 group-hover:opacity-100"
+              >
+                <Copy className="w-2.5 h-2.5 text-muted-foreground" />
+              </button>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -43,18 +61,62 @@ export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProp
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground line-clamp-2 mb-4 italic">
-        "{lead.bio}"
-      </p>
+      <div className="space-y-2 mb-4">
+        {lead.phoneNumber && (
+          <div className="flex items-center justify-between group/item">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground truncate">
+              <Phone className="w-3 h-3" />
+              {lead.phoneNumber}
+            </div>
+            <button 
+              onClick={(e) => copyToClipboard(e, lead.phoneNumber!, 'Phone number')}
+              className="p-1 hover:bg-accent rounded transition-colors opacity-0 group-hover/item:opacity-100"
+            >
+              <Copy className="w-3 h-3 text-muted-foreground" />
+            </button>
+          </div>
+        )}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground truncate">
+          <Globe className="w-3 h-3" />
+          {lead.website ? (
+            <a 
+              href={lead.website} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-primary truncate"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {lead.website.replace(/^https?:\/\/(www\.)?/, '')}
+            </a>
+          ) : (
+            <span className="italic opacity-50">No website found</span>
+          )}
+        </div>
+      </div>
+
+      {lead.notes && (
+        <div className="mb-4 p-2 bg-accent/20 rounded-xl border border-border/50">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground mb-1">
+            <MessageSquare className="w-3 h-3" />
+            NOTES
+          </div>
+          <p className="text-[10px] text-muted-foreground line-clamp-2 italic">
+            "{lead.notes}"
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-accent/30 rounded-xl p-2 text-center">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Followers</p>
-          <p className="font-bold text-sm">{(lead.followers || 0).toLocaleString()}</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Rating</p>
+          <div className="flex items-center justify-center gap-1 font-bold text-sm">
+            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+            {lead.rating || 'N/A'}
+          </div>
         </div>
         <div className="bg-accent/30 rounded-xl p-2 text-center">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Category</p>
-          <p className="font-bold text-sm truncate">{lead.category || 'N/A'}</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Reviews</p>
+          <p className="font-bold text-sm">{lead.userRatingsTotal || 0}</p>
         </div>
       </div>
 
@@ -71,14 +133,6 @@ export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProp
             )}
           >
             {isSaved ? 'Saved' : 'Save Lead'}
-          </button>
-        )}
-        {onView && (
-          <button
-            onClick={onView}
-            className="p-2 bg-accent hover:bg-accent/80 rounded-xl transition-colors"
-          >
-            <Instagram className="w-5 h-5" />
           </button>
         )}
       </div>

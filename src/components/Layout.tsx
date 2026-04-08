@@ -1,13 +1,13 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Search, PenTool, Settings, MessageCircle } from 'lucide-react';
+import { LayoutDashboard, Users, MapPin, PenTool, Settings, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/', tour: 'dashboard' },
   { icon: Users, label: 'Leads', path: '/leads', tour: 'leads' },
-  { icon: Search, label: 'Finder', path: '/finder', tour: 'finder' },
+  { icon: MapPin, label: 'Finder', path: '/finder', tour: 'finder' },
   { icon: PenTool, label: 'AI Writer', path: '/ai-writer', tour: 'writer' },
   { icon: MessageCircle, label: 'Chat', path: '/chat', tour: 'chat' },
   { icon: Settings, label: 'Settings', path: '/settings', tour: 'settings' },
@@ -22,9 +22,9 @@ export default function Layout() {
       <aside className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 border-r border-border bg-card p-6">
         <div className="flex items-center gap-3 mb-10">
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-            <Search className="text-primary-foreground w-6 h-6" />
+            <MapPin className="text-primary-foreground w-6 h-6" />
           </div>
-          <h1 className="text-xl font-display font-bold tracking-tight">InstaLead AI</h1>
+          <h1 className="text-xl font-display font-bold tracking-tight">GoogleLead AI</h1>
         </div>
         
         <nav className="flex-1 space-y-2">

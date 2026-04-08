@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Search, PenTool, Users, ArrowRight, CheckCircle2, Instagram, Zap, Shield, BarChart3 } from 'lucide-react';
+import { MapPin, PenTool, Users, ArrowRight, CheckCircle2, Chrome, Zap, Shield, BarChart3 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export default function LandingPage({ onGetStarted }: { onGetStarted: () => void }) {
@@ -11,9 +11,9 @@ export default function LandingPage({ onGetStarted }: { onGetStarted: () => void
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Search className="text-primary-foreground w-5 h-5" />
+              <MapPin className="text-primary-foreground w-5 h-5" />
             </div>
-            <span className="text-xl font-display font-bold tracking-tight">InstaLead AI</span>
+            <span className="text-xl font-display font-bold tracking-tight">GoogleLead AI</span>
           </div>
           <button 
             onClick={onGetStarted}
@@ -33,15 +33,15 @@ export default function LandingPage({ onGetStarted }: { onGetStarted: () => void
             transition={{ duration: 0.5 }}
           >
             <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold mb-6 tracking-wider uppercase">
-              The Future of Instagram Outreach
+              The Future of Local Business Outreach
             </span>
             <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight mb-6 leading-[1.1]">
-              Turn Instagram Profiles into <br />
+              Turn Google Maps into <br />
               <span className="text-primary">High-Value Leads</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-              Find, score, and reach out to potential customers on Instagram using AI. 
-              Automate your outreach workflow and grow your business faster.
+              Find, score, and reach out to local businesses using AI. 
+              Automate your Google Maps outreach workflow and grow your agency faster.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button 
@@ -87,19 +87,19 @@ export default function LandingPage({ onGetStarted }: { onGetStarted: () => void
             {[
               {
                 title: 'Lead Discovery',
-                desc: 'Search by keywords, location, and follower count to find your ideal audience.',
-                icon: Search,
+                desc: 'Search Google Maps by keywords and location to find local businesses instantly.',
+                icon: MapPin,
                 color: 'text-blue-500'
               },
               {
                 title: 'AI Lead Scoring',
-                desc: 'Our AI analyzes bios and profiles to tell you exactly who is worth your time.',
+                desc: 'Our AI analyzes ratings, reviews, and categories to find your best prospects.',
                 icon: BarChart3,
                 color: 'text-purple-500'
               },
               {
                 title: 'Smart Outreach',
-                desc: 'Generate personalized DMs that actually get replies using Gemini AI.',
+                desc: 'Generate personalized emails and scripts that actually get replies.',
                 icon: PenTool,
                 color: 'text-pink-500'
               },
@@ -144,10 +144,10 @@ export default function LandingPage({ onGetStarted }: { onGetStarted: () => void
       {/* Social Proof */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-10">Trusted by creators and agencies worldwide</p>
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-10">Trusted by agencies and sales teams worldwide</p>
           <div className="flex flex-wrap justify-center items-center gap-12 opacity-50 grayscale">
-            <Instagram className="w-10 h-10" />
-            <Zap className="w-10 h-10" />
+            <Chrome className="w-10 h-10" />
+            <MapPin className="w-10 h-10" />
             <Zap className="w-10 h-10" />
             <Zap className="w-10 h-10" />
           </div>
@@ -161,7 +161,7 @@ export default function LandingPage({ onGetStarted }: { onGetStarted: () => void
           <div className="relative z-10">
             <h2 className="text-4xl font-display font-bold mb-6">Ready to find your next client?</h2>
             <p className="text-primary-foreground/80 mb-10 text-lg max-w-xl mx-auto">
-              Join thousands of businesses using InstaLead AI to automate their growth.
+              Join thousands of businesses using GoogleLead AI to automate their growth.
             </p>
             <button 
               onClick={onGetStarted}
@@ -178,11 +178,11 @@ export default function LandingPage({ onGetStarted }: { onGetStarted: () => void
         <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-              <Search className="text-primary-foreground w-4 h-4" />
+              <MapPin className="text-primary-foreground w-4 h-4" />
             </div>
-            <span className="font-display font-bold tracking-tight">InstaLead AI</span>
+            <span className="font-display font-bold tracking-tight">GoogleLead AI</span>
           </div>
-          <p className="text-sm text-muted-foreground">© 2026 InstaLead AI. Built for growth.</p>
+          <p className="text-sm text-muted-foreground">© 2026 GoogleLead AI. Built for growth.</p>
           <div className="flex gap-6 text-sm font-medium text-muted-foreground">
             <a href="#" className="hover:text-primary">Privacy</a>
             <a href="#" className="hover:text-primary">Terms</a>

@@ -3,12 +3,13 @@ export type LeadStatus = 'new' | 'contacted' | 'replied' | 'converted' | 'lost';
 export interface Lead {
   id: string;
   ownerId: string;
-  username: string;
-  fullName?: string;
-  bio?: string;
-  followers: number;
+  name: string;
+  address: string;
+  phoneNumber?: string;
+  website?: string;
+  rating?: number;
+  userRatingsTotal?: number;
   category?: string;
-  contactEmail?: string;
   status: LeadStatus;
   notes?: string;
   tags: string[];

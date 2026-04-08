@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, Instagram, Mail, Tag, Calendar, MessageSquare, Trash2, CheckCircle2, Clock, Plus, BarChart3, RefreshCw, Save, Zap } from 'lucide-react';
+import { X, MapPin, Phone, Globe, Star, Tag, Calendar, MessageSquare, Trash2, CheckCircle2, Clock, Plus, BarChart3, RefreshCw, Save, Zap, Copy } from 'lucide-react';
 import { Lead, LeadStatus, Task } from '../types';
 import { cn, formatNumber } from '../lib/utils';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { scoreLead } from '../services/aiService';
+import { toast } from 'sonner';
 
 interface LeadDetailsModalProps {
   lead: Lead;
@@ -23,6 +24,33 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
   const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [newTaskDate, setNewTaskDate] = useState('');
   const [scoring, setScoring] = useState(false);
+  const [notes, setNotes] = useState(lead.notes || '');
+  const [savingNotes, setSavingNotes] = useState(false);
+
+  useEffect(() => {
+    setNotes(lead.notes || '');
+  }, [lead.notes]);
+
+  const handleSaveNotes = async () => {
+    setSavingNotes(true);
+    try {
+      await updateDoc(doc(db, 'leads', lead.id), {
+        notes,
+        updatedAt: new Date().toISOString()
+      });
+      toast.success('Notes saved');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to save notes');
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard`);
+  };
 
   useEffect(() => {
     const q = query(collection(db, 'tasks'), where('leadId', '==', lead.id));
@@ -79,7 +107,14 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
     }
     setScoring(true);
     try {
-      const result = await scoreLead(lead.username, lead.bio || '', lead.followers, businessType, offer);
+      const result = await scoreLead(
+        lead.name, 
+        lead.category || '', 
+        lead.rating || 0, 
+        lead.userRatingsTotal || 0,
+        businessType, 
+        offer
+      );
       await updateDoc(doc(db, 'leads', lead.id), {
         aiScore: result.score,
         aiReasoning: result.reasoning,
@@ -111,11 +146,11 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
         <div className="p-6 border-b border-border flex items-center justify-between bg-accent/30">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-              <User className="w-6 h-6" />
+              <MapPin className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-display font-bold tracking-tight">@{lead.username}</h2>
-              <p className="text-sm text-muted-foreground">{lead.fullName || 'No full name provided'}</p>
+              <h2 className="text-xl font-display font-bold tracking-tight">{lead.name}</h2>
+              <p className="text-sm text-muted-foreground">{lead.address}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -157,7 +192,7 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
                         </div>
                         <div>
                           <p className="text-sm font-bold">Lead Score</p>
-                          <p className="text-xs text-muted-foreground">Based on profile relevance</p>
+                          <p className="text-xs text-muted-foreground">Based on business relevance</p>
                         </div>
                       </div>
                       <button 
@@ -190,38 +225,103 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
 
             <section className="space-y-4">
               <h3 className="text-lg font-bold flex items-center gap-2">
-                <Instagram className="w-5 h-5 text-pink-500" />
-                Profile Details
+                <MapPin className="w-5 h-5 text-red-500" />
+                Business Details
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-card border border-border p-4 rounded-2xl">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Followers</p>
-                  <p className="font-bold">{formatNumber(lead.followers)}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Rating</p>
+                  <div className="flex items-center gap-1 font-bold">
+                    <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                    {lead.rating || 'N/A'} ({lead.userRatingsTotal || 0} reviews)
+                  </div>
                 </div>
                 <div className="bg-card border border-border p-4 rounded-2xl">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Category</p>
                   <p className="font-bold">{lead.category || 'N/A'}</p>
                 </div>
                 <div className="bg-card border border-border p-4 rounded-2xl sm:col-span-2">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Bio</p>
-                  <p className="text-sm leading-relaxed">{lead.bio || 'No bio available'}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Address</p>
+                  <p className="text-sm leading-relaxed">{lead.address}</p>
                 </div>
               </div>
             </section>
 
             <section className="space-y-4">
               <h3 className="text-lg font-bold flex items-center gap-2">
-                <Mail className="w-5 h-5 text-blue-500" />
+                <MessageSquare className="w-5 h-5 text-green-500" />
+                Notes
+              </h3>
+              <div className="space-y-3">
+                <textarea 
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="Add private notes about this lead..." 
+                  rows={4}
+                  className="w-full bg-accent/30 border border-border rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
+                />
+                <button 
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes || notes === (lead.notes || '')}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-bold disabled:opacity-50 transition-all hover:scale-105 active:scale-95"
+                >
+                  {savingNotes ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Notes
+                </button>
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <Phone className="w-5 h-5 text-blue-500" />
                 Contact Info
               </h3>
-              <div className="bg-card border border-border p-4 rounded-2xl flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-sm font-medium">{lead.contactEmail || 'No email found'}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-card border border-border p-4 rounded-2xl flex items-center justify-between group">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Phone className="w-5 h-5 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium truncate">{lead.phoneNumber || 'No phone found'}</span>
+                  </div>
+                  {lead.phoneNumber && (
+                    <button 
+                      onClick={() => copyToClipboard(lead.phoneNumber!, 'Phone number')}
+                      className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
-                {lead.contactEmail && (
-                  <button className="text-primary text-xs font-bold hover:underline">Copy Email</button>
-                )}
+                <div className="bg-card border border-border p-4 rounded-2xl flex items-center justify-between group">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Globe className="w-5 h-5 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium truncate">{lead.website || 'No website found'}</span>
+                  </div>
+                  {lead.website && (
+                    <div className="flex items-center gap-1">
+                      <a href={lead.website} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary">
+                        <Globe className="w-4 h-4" />
+                      </a>
+                      <button 
+                        onClick={() => copyToClipboard(lead.website!, 'Website URL')}
+                        className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="bg-card border border-border p-4 rounded-2xl flex items-center justify-between group sm:col-span-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <MapPin className="w-5 h-5 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium truncate">{lead.address}</span>
+                  </div>
+                  <button 
+                    onClick={() => copyToClipboard(lead.address, 'Address')}
+                    className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </section>
           </div>

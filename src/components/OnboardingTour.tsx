@@ -12,31 +12,31 @@ interface Step {
 
 const steps: Step[] = [
   {
-    title: "Welcome to InstaLead AI! 🚀",
-    description: "Let's take a quick tour to help you find and convert your ideal Instagram leads using AI.",
+    title: "Welcome to GoogleLead AI! 🚀",
+    description: "Let's take a quick tour to help you find and convert high-value local business leads using Google Maps and AI.",
     position: 'center'
   },
   {
     title: "Find Leads",
-    description: "Use the Finder to search for Instagram profiles by keywords, category, or location. Our AI helps you filter the best ones.",
+    description: "Use the Finder to search Google Maps for businesses by keywords and location. Our AI helps you find the most relevant prospects.",
     target: '[data-tour="finder"]',
     position: 'bottom'
   },
   {
     title: "AI Lead Scoring",
-    description: "Every lead you save is automatically analyzed and scored based on your business profile. Focus on the high-score leads first!",
+    description: "Every lead you save is automatically analyzed and scored based on your business profile. Focus on the high-score businesses first!",
     target: '[data-tour="leads"]',
     position: 'bottom'
   },
   {
     title: "AI Outreach Writer",
-    description: "Generate personalized DMs and follow-ups in seconds. Set your business details once, and let AI do the writing.",
+    description: "Generate personalized emails and outreach scripts in seconds. Set your business details once, and let AI do the writing.",
     target: '[data-tour="writer"]',
     position: 'bottom'
   },
   {
     title: "Automation & Tasks",
-    description: "Set up rules to automatically create tasks when lead statuses change. Stay organized and never miss a follow-up.",
+    description: "Set up rules to automatically create tasks when lead statuses change. Stay organized and never miss a local follow-up.",
     target: '[data-tour="settings"]',
     position: 'bottom'
   }
