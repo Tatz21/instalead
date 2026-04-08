@@ -5,12 +5,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: Users, label: 'Leads', path: '/leads' },
-  { icon: Search, label: 'Finder', path: '/finder' },
-  { icon: PenTool, label: 'AI Writer', path: '/ai-writer' },
-  { icon: MessageCircle, label: 'Chat', path: '/chat' },
-  { icon: Settings, label: 'Settings', path: '/settings' },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/', tour: 'dashboard' },
+  { icon: Users, label: 'Leads', path: '/leads', tour: 'leads' },
+  { icon: Search, label: 'Finder', path: '/finder', tour: 'finder' },
+  { icon: PenTool, label: 'AI Writer', path: '/ai-writer', tour: 'writer' },
+  { icon: MessageCircle, label: 'Chat', path: '/chat', tour: 'chat' },
+  { icon: Settings, label: 'Settings', path: '/settings', tour: 'settings' },
 ];
 
 export default function Layout() {
@@ -32,6 +32,7 @@ export default function Layout() {
             <NavLink
               key={item.path}
               to={item.path}
+              data-tour={item.tour}
               className={({ isActive }: { isActive: boolean }) => cn(
                 "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
                 isActive 

@@ -75,10 +75,14 @@ export async function scoreLead(
     1. Assign a lead score from 0 to 100.
     2. Provide a brief, punchy 1-sentence reasoning for the score.
     
-    Scoring Criteria:
-    - Relevance (0-50 pts): Does their bio indicate they are in the target audience? Do they have a need for the offer?
-    - Authority/Reach (0-30 pts): Does their follower count or bio suggest they are an influencer, business owner, or decision-maker?
-    - Engagement Potential (0-20 pts): Does their bio feel active or approachable?
+    Scoring Framework:
+    - RELEVANCE (0-50 pts): How well does their bio align with the target audience? Look for keywords, industry mentions, or pain points.
+    - AUTHORITY (0-30 pts): Does the follower count (relative to niche) or bio suggest they are a decision-maker, influencer, or established business?
+    - INTENT/ACCESSIBILITY (0-20 pts): Does the bio mention "DM for collab", "Email in bio", or feel like an active, open account?
+    
+    Example Analysis:
+    - Bio: "Fitness coach helping moms lose weight" | Business: "Meal prep service" | Score: 95 | Reasoning: "Perfect alignment with target audience and high potential for recurring meal prep needs."
+    - Bio: "Tech enthusiast | Gamer" | Business: "Real estate agency" | Score: 15 | Reasoning: "No clear interest or financial indicators related to property investment."
     
     Output must be a JSON object with "score" (number) and "reasoning" (string).
   `;

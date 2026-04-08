@@ -19,6 +19,8 @@ interface LeadDetailsModalProps {
 export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDelete, businessType, offer }: LeadDetailsModalProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskDescription, setNewTaskDescription] = useState('');
+  const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [newTaskDate, setNewTaskDate] = useState('');
   const [scoring, setScoring] = useState(false);
 
@@ -39,11 +41,15 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
         ownerId: lead.ownerId,
         leadId: lead.id,
         title: newTaskTitle,
+        description: newTaskDescription,
+        priority: newTaskPriority,
         dueDate: newTaskDate,
         completed: false,
         createdAt: new Date().toISOString(),
       });
       setNewTaskTitle('');
+      setNewTaskDescription('');
+      setNewTaskPriority('medium');
       setNewTaskDate('');
     } catch (error) {
       console.error(error);
@@ -252,10 +258,26 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
                 <input 
                   value={newTaskTitle}
                   onChange={e => setNewTaskTitle(e.target.value)}
-                  placeholder="What needs to be done?" 
+                  placeholder="Task title..." 
                   className="w-full bg-accent/50 border border-border rounded-xl py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
                 />
+                <textarea 
+                  value={newTaskDescription}
+                  onChange={e => setNewTaskDescription(e.target.value)}
+                  placeholder="Details (optional)..." 
+                  rows={2}
+                  className="w-full bg-accent/50 border border-border rounded-xl py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
+                />
                 <div className="flex gap-2">
+                  <select
+                    value={newTaskPriority}
+                    onChange={e => setNewTaskPriority(e.target.value as any)}
+                    className="flex-1 bg-accent/50 border border-border rounded-xl py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
+                  >
+                    <option value="low">Low Priority</option>
+                    <option value="medium">Medium Priority</option>
+                    <option value="high">High Priority</option>
+                  </select>
                   <input 
                     type="date"
                     value={newTaskDate}
@@ -290,10 +312,23 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
                       {task.completed && <CheckCircle2 className="w-3 h-3" />}
                     </button>
                     <div className="flex-1 min-w-0">
-                      <p className={cn("text-sm font-medium truncate", task.completed && "line-through")}>
-                        {task.title}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <div className="flex items-center gap-2">
+                        <p className={cn("text-sm font-medium truncate", task.completed && "line-through")}>
+                          {task.title}
+                        </p>
+                        <span className={cn(
+                          "text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase",
+                          task.priority === 'high' ? "bg-red-500/10 text-red-500" :
+                          task.priority === 'medium' ? "bg-yellow-500/10 text-yellow-500" :
+                          "bg-blue-500/10 text-blue-500"
+                        )}>
+                          {task.priority}
+                        </span>
+                      </div>
+                      {task.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{task.description}</p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
                         <Clock className="w-3 h-3" />
                         {new Date(task.dueDate).toLocaleDateString()}
                       </p>

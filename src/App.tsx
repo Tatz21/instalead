@@ -12,22 +12,25 @@ import {
   LogOut, Mail, Lock, Github, Chrome, Plus, Filter, 
   ArrowRight, CheckCircle2, MessageSquare, TrendingUp,
   Instagram, Copy, RefreshCw, Trash2, Save, MessageCircle, Send,
-  ChevronRight, MoreHorizontal, CheckSquare, Square, Clock
+  ChevronRight, MoreHorizontal, CheckSquare, Square, Clock, Zap, X, Tag
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { Toaster, toast } from 'sonner';
+import Papa from 'papaparse';
 
 import { auth, db, googleProvider } from './lib/firebase';
 import { cn, formatNumber } from './lib/utils';
-import { Lead, LeadStatus, OutreachMessage, UserProfile, Task } from './types';
+import { Lead, LeadStatus, OutreachMessage, UserProfile, Task, AutomationRule } from './types';
 import { instagramService } from './services/instagramService';
-import { generateOutreachMessage } from './services/aiService';
+import { generateOutreachMessage, scoreLead } from './services/aiService';
 
 import Layout from './components/Layout';
 import StatsCard from './components/StatsCard';
 import LeadCard from './components/LeadCard';
 import LandingPage from './components/LandingPage';
 import LeadDetailsModal from './components/LeadDetailsModal';
+import OnboardingTour from './components/OnboardingTour';
 
 // --- Auth Screen ---
 function AuthScreen() {
@@ -109,7 +112,7 @@ function AuthScreen() {
 }
 
 // --- Dashboard Screen ---
-function DashboardScreen({ leads, tasks }: { leads: Lead[], tasks: Task[] }) {
+function DashboardScreen({ leads, tasks, onSelectLead }: { leads: Lead[], tasks: Task[], onSelectLead: (lead: Lead) => void }) {
   const stats = [
     { label: 'Total Leads', value: leads.length, icon: Users, trend: '+12%', trendUp: true },
     { label: 'Messages Sent', value: leads.filter(l => l.status !== 'new').length, icon: MessageSquare, trend: '+5%', trendUp: true },
@@ -118,7 +121,7 @@ function DashboardScreen({ leads, tasks }: { leads: Lead[], tasks: Task[] }) {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="dashboard">
       <header>
         <h2 className="text-3xl font-display font-bold tracking-tight">Dashboard</h2>
         <p className="text-muted-foreground">Welcome back! Here's your outreach overview.</p>
@@ -145,7 +148,7 @@ function DashboardScreen({ leads, tasks }: { leads: Lead[], tasks: Task[] }) {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {leads.slice(0, 4).map((lead) => (
-              <LeadCard key={lead.id} lead={lead} />
+              <LeadCard key={lead.id} lead={lead} onView={() => onSelectLead(lead)} />
             ))}
             {leads.length === 0 && (
               <div className="col-span-full py-12 text-center bg-card rounded-3xl border border-dashed border-border">
@@ -227,7 +230,7 @@ function FinderScreen({ onSaveLead, savedUsernames }: { onSaveLead: (lead: Parti
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="finder">
       <header>
         <h2 className="text-3xl font-display font-bold tracking-tight">Lead Finder</h2>
         <p className="text-muted-foreground">Search Instagram for potential business leads.</p>
@@ -303,17 +306,90 @@ function LeadsScreen({
   onDeleteLead, 
   onSelectLead,
   businessType,
-  offer
+  offer,
+  user
 }: { 
   leads: Lead[], 
   onUpdateStatus: (id: string, status: LeadStatus) => void, 
   onDeleteLead: (id: string) => void,
   onSelectLead: (lead: Lead) => void,
   businessType: string,
-  offer: string
+  offer: string,
+  user: FirebaseUser
 }) {
   const [filter, setFilter] = useState<LeadStatus | 'all'>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [importing, setImporting] = useState(false);
+  const [messagingBulk, setMessagingBulk] = useState(false);
+
+  const handleImportLeads = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const newLeads = results.data as any[];
+          let count = 0;
+          for (const leadData of newLeads) {
+            if (!leadData.username) continue;
+            
+            await addDoc(collection(db, 'leads'), {
+              ownerId: user.uid,
+              username: leadData.username,
+              fullName: leadData.fullName || '',
+              bio: leadData.bio || '',
+              followers: parseInt(leadData.followers) || 0,
+              category: leadData.category || '',
+              contactEmail: leadData.contactEmail || '',
+              status: 'new',
+              tags: leadData.tags ? leadData.tags.split(',').map((t: string) => t.trim()) : [],
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+            count++;
+          }
+          toast.success(`Successfully imported ${count} leads`);
+        } catch (error) {
+          console.error(error);
+          toast.error('Failed to import leads');
+        } finally {
+          setImporting(false);
+        }
+      }
+    });
+  };
+
+  const handleBulkMessage = async () => {
+    if (!businessType || !offer) {
+      toast.error('Please set your business details first');
+      return;
+    }
+    setMessagingBulk(true);
+    try {
+      const selectedLeads = leads.filter(l => selectedIds.has(l.id));
+      for (const lead of selectedLeads) {
+        const result = await generateOutreachMessage(lead.username, lead.bio || '', businessType, offer, 'casual');
+        await addDoc(collection(db, 'messages'), {
+          ownerId: user.uid,
+          leadId: lead.id,
+          content: result.cold_dm,
+          type: 'cold_dm',
+          createdAt: new Date().toISOString()
+        });
+      }
+      toast.success(`Generated messages for ${selectedLeads.length} leads`);
+      setSelectedIds(new Set());
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to generate bulk messages');
+    } finally {
+      setMessagingBulk(false);
+    }
+  };
 
   const filteredLeads = filter === 'all' ? leads : leads.filter(l => l.status === filter);
 
@@ -347,15 +423,67 @@ function LeadsScreen({
     setSelectedIds(new Set());
   };
 
+  const [scoringBulk, setScoringBulk] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const [showTagInput, setShowTagInput] = useState(false);
+
+  const handleBulkTag = async () => {
+    if (!tagInput) return;
+    try {
+      const selectedLeads = leads.filter(l => selectedIds.has(l.id));
+      for (const lead of selectedLeads) {
+        const newTags = Array.from(new Set([...(lead.tags || []), tagInput]));
+        await updateDoc(doc(db, 'leads', lead.id), {
+          tags: newTags,
+          updatedAt: new Date().toISOString()
+        });
+      }
+      setTagInput('');
+      setShowTagInput(false);
+      setSelectedIds(new Set());
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  const handleBulkScore = async () => {
+    if (!businessType || !offer) {
+      alert('Please set your business type and offer in the AI Writer or Settings first.');
+      return;
+    }
+    setScoringBulk(true);
+    try {
+      const selectedLeads = leads.filter(l => selectedIds.has(l.id));
+      for (const lead of selectedLeads) {
+        const result = await scoreLead(lead.username, lead.bio || '', lead.followers, businessType, offer);
+        await updateDoc(doc(db, 'leads', lead.id), {
+          aiScore: result.score,
+          aiReasoning: result.reasoning,
+          updatedAt: new Date().toISOString()
+        });
+      }
+      setSelectedIds(new Set());
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setScoringBulk(false);
+    }
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="leads">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-display font-bold tracking-tight">My Leads</h2>
           <p className="text-muted-foreground">Manage and track your outreach progress.</p>
         </div>
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
-          {['all', 'new', 'contacted', 'replied', 'converted', 'lost'].map((s) => (
+        <div className="flex items-center gap-3">
+          <label className="cursor-pointer px-4 py-2 bg-accent text-accent-foreground rounded-xl text-xs font-bold hover:bg-accent/80 transition-all flex items-center gap-2">
+            <Plus className="w-3 h-3" />
+            {importing ? 'Importing...' : 'Import CSV'}
+            <input type="file" accept=".csv" onChange={handleImportLeads} className="hidden" disabled={importing} />
+          </label>
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
+            {['all', 'new', 'contacted', 'replied', 'converted', 'lost'].map((s) => (
             <button
               key={s}
               onClick={() => setFilter(s as any)}
@@ -367,6 +495,7 @@ function LeadsScreen({
               {s.toUpperCase()}
             </button>
           ))}
+          </div>
         </div>
       </header>
 
@@ -378,6 +507,36 @@ function LeadsScreen({
         >
           <p className="text-sm font-bold text-primary">{selectedIds.size} leads selected</p>
           <div className="flex items-center gap-2 w-full sm:w-auto">
+            {showTagInput ? (
+              <div className="flex items-center gap-2 flex-1 sm:flex-none">
+                <input 
+                  value={tagInput}
+                  onChange={e => setTagInput(e.target.value)}
+                  placeholder="New tag..."
+                  className="bg-background border border-border rounded-xl px-3 py-2 text-xs font-bold outline-none w-full sm:w-32"
+                />
+                <button 
+                  onClick={handleBulkTag}
+                  className="p-2 bg-primary text-primary-foreground rounded-xl"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => setShowTagInput(false)}
+                  className="p-2 bg-accent rounded-xl"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setShowTagInput(true)}
+                className="flex-1 sm:flex-none px-4 py-2 bg-accent text-accent-foreground rounded-xl text-xs font-bold hover:bg-accent/80 transition-all flex items-center justify-center gap-2"
+              >
+                <Tag className="w-3 h-3" />
+                Add Tag
+              </button>
+            )}
             <select 
               onChange={(e) => handleBulkStatusUpdate(e.target.value as LeadStatus)}
               className="flex-1 sm:flex-none bg-background border border-border rounded-xl px-3 py-2 text-xs font-bold outline-none"
@@ -395,6 +554,22 @@ function LeadsScreen({
               className="flex-1 sm:flex-none px-4 py-2 bg-destructive text-destructive-foreground rounded-xl text-xs font-bold hover:bg-destructive/90 transition-all"
             >
               Delete Selected
+            </button>
+            <button 
+              onClick={handleBulkScore}
+              disabled={scoringBulk}
+              className="flex-1 sm:flex-none px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              {scoringBulk ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+              {scoringBulk ? 'Scoring...' : 'Score Selected'}
+            </button>
+            <button 
+              onClick={handleBulkMessage}
+              disabled={messagingBulk}
+              className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              {messagingBulk ? <RefreshCw className="w-3 h-3 animate-spin" /> : <MessageSquare className="w-3 h-3" />}
+              {messagingBulk ? 'Generating...' : 'Bulk Message'}
             </button>
           </div>
         </motion.div>
@@ -605,8 +780,10 @@ function AIWriterScreen({ user, businessProfile }: { user: FirebaseUser, busines
         offer,
         updatedAt: new Date().toISOString()
       }, { merge: true });
+      toast.success('Business profile saved');
     } catch (error) {
       console.error(error);
+      toast.error('Failed to save profile');
     } finally {
       setSaving(false);
     }
@@ -620,8 +797,10 @@ function AIWriterScreen({ user, businessProfile }: { user: FirebaseUser, busines
       await handleSaveProfile();
       const result = await generateOutreachMessage(businessType, offer, tone);
       setMessages(result);
+      toast.success('Messages generated');
     } catch (error) {
       console.error(error);
+      toast.error('Failed to generate messages');
     } finally {
       setLoading(false);
     }
@@ -633,7 +812,7 @@ function AIWriterScreen({ user, businessProfile }: { user: FirebaseUser, busines
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="writer">
       <header>
         <h2 className="text-3xl font-display font-bold tracking-tight">AI Message Writer</h2>
         <p className="text-muted-foreground">Generate high-converting outreach messages using AI.</p>
@@ -846,60 +1025,208 @@ function ChatScreen() {
 }
 
 // --- Settings Screen ---
-function SettingsScreen({ user }: { user: FirebaseUser }) {
+function SettingsScreen({ user, rules }: { user: FirebaseUser, rules: AutomationRule[] }) {
+  const [newRuleName, setNewRuleName] = useState('');
+  const [newRuleTriggerStatus, setNewRuleTriggerStatus] = useState<LeadStatus>('replied');
+  const [newRuleTaskTitle, setNewRuleTaskTitle] = useState('');
+  const [newRuleTaskPriority, setNewRuleTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [newRuleDaysOffset, setNewRuleDaysOffset] = useState(1);
+  const [addingRule, setAddingRule] = useState(false);
+
+  const handleAddRule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRuleName || !newRuleTaskTitle) return;
+    setAddingRule(true);
+    try {
+      await addDoc(collection(db, 'automationRules'), {
+        ownerId: user.uid,
+        name: newRuleName,
+        trigger: {
+          type: 'status_change',
+          status: newRuleTriggerStatus
+        },
+        action: {
+          type: 'create_task',
+          taskTitle: newRuleTaskTitle,
+          taskPriority: newRuleTaskPriority,
+          daysOffset: newRuleDaysOffset
+        },
+        enabled: true,
+        createdAt: new Date().toISOString()
+      });
+      setNewRuleName('');
+      setNewRuleTaskTitle('');
+      toast.success('Automation rule added');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to add rule');
+    } finally {
+      setAddingRule(false);
+    }
+  };
+
+  const toggleRule = async (rule: AutomationRule) => {
+    try {
+      await updateDoc(doc(db, 'automationRules', rule.id), { enabled: !rule.enabled });
+      toast.success(`Rule ${!rule.enabled ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const deleteRule = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'automationRules', id));
+      toast.success('Rule deleted');
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="settings">
       <header>
         <h2 className="text-3xl font-display font-bold tracking-tight">Settings</h2>
         <p className="text-muted-foreground">Manage your account and preferences.</p>
       </header>
 
-      <div className="max-w-2xl space-y-6">
-        <div className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-6">
-          <h3 className="text-xl font-bold">Profile</h3>
-          <div className="flex items-center gap-4">
-            <img src={user.photoURL || ''} alt="" className="w-16 h-16 rounded-2xl border border-border" />
-            <div>
-              <p className="font-bold text-lg">{user.displayName}</p>
-              <p className="text-sm text-muted-foreground">{user.email}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-6">
-          <h3 className="text-xl font-bold">Preferences</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
+      <div className="max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="space-y-6">
+          <div className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-6">
+            <h3 className="text-xl font-bold">Profile</h3>
+            <div className="flex items-center gap-4">
+              <img src={user.photoURL || ''} alt="" className="w-16 h-16 rounded-2xl border border-border" />
               <div>
-                <p className="font-bold">Dark Mode</p>
-                <p className="text-xs text-muted-foreground">Toggle between light and dark theme</p>
-              </div>
-              <div className="w-12 h-6 bg-primary rounded-full relative cursor-pointer">
-                <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
+                <p className="font-bold text-lg">{user.displayName}</p>
+                <p className="text-sm text-muted-foreground">{user.email}</p>
               </div>
             </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-6">
+            <h3 className="text-xl font-bold">Preferences</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold">Dark Mode</p>
+                  <p className="text-xs text-muted-foreground">Toggle between light and dark theme</p>
+                </div>
+                <div className="w-12 h-6 bg-primary rounded-full relative cursor-pointer">
+                  <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="font-bold">Email Notifications</p>
-                <p className="text-xs text-muted-foreground">Receive alerts for new replies</p>
+              <h3 className="text-xl font-bold">Automation Rules</h3>
+              <Zap className="w-5 h-5 text-primary" />
+            </div>
+            
+            <form onSubmit={handleAddRule} className="space-y-3 p-4 bg-accent/20 rounded-2xl border border-border">
+              <p className="text-xs font-bold uppercase text-muted-foreground">Add New Rule</p>
+              <input 
+                value={newRuleName}
+                onChange={e => setNewRuleName(e.target.value)}
+                placeholder="Rule Name (e.g. Follow-up on Reply)"
+                className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm outline-none"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-muted-foreground">IF STATUS IS</label>
+                  <select 
+                    value={newRuleTriggerStatus}
+                    onChange={e => setNewRuleTriggerStatus(e.target.value as any)}
+                    className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none"
+                  >
+                    <option value="new">NEW</option>
+                    <option value="contacted">CONTACTED</option>
+                    <option value="replied">REPLIED</option>
+                    <option value="converted">CONVERTED</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-muted-foreground">THEN CREATE TASK</label>
+                  <input 
+                    value={newRuleTaskTitle}
+                    onChange={e => setNewRuleTaskTitle(e.target.value)}
+                    placeholder="Task Title"
+                    className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none"
+                  />
+                </div>
               </div>
-              <div className="w-12 h-6 bg-muted rounded-full relative cursor-pointer">
-                <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full"></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-muted-foreground">PRIORITY</label>
+                  <select 
+                    value={newRuleTaskPriority}
+                    onChange={e => setNewRuleTaskPriority(e.target.value as any)}
+                    className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none"
+                  >
+                    <option value="low">LOW</option>
+                    <option value="medium">MEDIUM</option>
+                    <option value="high">HIGH</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-muted-foreground">DAYS OFFSET</label>
+                  <input 
+                    type="number"
+                    value={newRuleDaysOffset}
+                    onChange={e => setNewRuleDaysOffset(parseInt(e.target.value))}
+                    className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none"
+                  />
+                </div>
               </div>
+              <button 
+                type="submit"
+                disabled={addingRule}
+                className="w-full py-2 bg-primary text-primary-foreground rounded-xl font-bold text-xs hover:scale-[1.02] transition-all"
+              >
+                {addingRule ? 'Adding...' : 'Add Rule'}
+              </button>
+            </form>
+
+            <div className="space-y-3">
+              {rules.map(rule => (
+                <div key={rule.id} className="flex items-center justify-between p-3 bg-accent/10 border border-border rounded-2xl">
+                  <div>
+                    <p className="text-sm font-bold">{rule.name}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      If {rule.trigger.status} → Create "{rule.action.taskTitle}" (+{rule.action.daysOffset}d)
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => toggleRule(rule)}
+                      className={cn(
+                        "w-10 h-5 rounded-full relative transition-all",
+                        rule.enabled ? "bg-primary" : "bg-muted"
+                      )}
+                    >
+                      <div className={cn(
+                        "absolute top-1 w-3 h-3 bg-white rounded-full transition-all",
+                        rule.enabled ? "right-1" : "left-1"
+                      )} />
+                    </button>
+                    <button onClick={() => deleteRule(rule.id)} className="p-1.5 hover:bg-destructive/10 rounded-lg text-muted-foreground hover:text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {rules.length === 0 && (
+                <p className="text-center py-8 text-xs text-muted-foreground opacity-50 italic">No automation rules yet</p>
+              )}
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-6">
-          <h3 className="text-xl font-bold">API Keys</h3>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Gemini API Key</label>
-              <input type="password" value="••••••••••••••••" readOnly className="w-full bg-accent/50 border border-border rounded-xl py-2.5 px-4 outline-none" />
-            </div>
-          </div>
-        </div>
-
+      <div className="max-w-2xl">
         <button 
           onClick={() => signOut(auth)}
           className="w-full py-4 bg-destructive/10 text-destructive rounded-2xl font-bold hover:bg-destructive/20 transition-all flex items-center justify-center gap-2"
@@ -915,9 +1242,11 @@ function SettingsScreen({ user }: { user: FirebaseUser }) {
 // --- Main App ---
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [automationRules, setAutomationRules] = useState<AutomationRule[]>([]);
   const [showLanding, setShowLanding] = useState(true);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [businessProfile, setBusinessProfile] = useState({ businessType: '', offer: '' });
@@ -945,30 +1274,75 @@ export default function App() {
       setTasks(data.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
     });
 
-    // Fetch business profile
+    // Fetch business profile and user profile
     const profileRef = doc(db, 'profiles', user.uid);
     const unsubProfile = onSnapshot(profileRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        setProfile({ uid: user.uid, ...data } as UserProfile);
         setBusinessProfile({
           businessType: data.businessType || '',
           offer: data.offer || ''
         });
+      } else {
+        // Initialize profile
+        const newProfile: Partial<UserProfile> = {
+          uid: user.uid,
+          email: user.email || '',
+          displayName: user.displayName || '',
+          photoURL: user.photoURL || '',
+          role: 'user',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          onboardingCompleted: false,
+          settings: {
+            theme: 'light',
+            apiKeys: {}
+          }
+        };
+        setDoc(profileRef, newProfile);
       }
+    });
+
+    const qRules = query(collection(db, 'automationRules'), where('ownerId', '==', user.uid));
+    const unsubRules = onSnapshot(qRules, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as AutomationRule[];
+      setAutomationRules(data);
     });
 
     return () => {
       unsubLeads();
       unsubTasks();
       unsubProfile();
+      unsubRules();
     };
   }, [user]);
 
   const handleSaveLead = async (leadData: Partial<Lead>) => {
     if (!user) return;
     try {
+      let scoreData = {};
+      if (businessProfile.businessType && businessProfile.offer) {
+        try {
+          const result = await scoreLead(
+            leadData.username!, 
+            leadData.bio || '', 
+            leadData.followers || 0, 
+            businessProfile.businessType, 
+            businessProfile.offer
+          );
+          scoreData = {
+            aiScore: result.score,
+            aiReasoning: result.reasoning
+          };
+        } catch (err) {
+          console.error("Auto-scoring failed:", err);
+        }
+      }
+
       await addDoc(collection(db, 'leads'), {
         ...leadData,
+        ...scoreData,
         ownerId: user.uid,
         status: 'new',
         tags: [],
@@ -986,8 +1360,30 @@ export default function App() {
         status,
         updatedAt: new Date().toISOString()
       });
+      toast.success(`Lead status updated to ${status}`);
+
+      // Trigger Automation Rules
+      const triggeredRules = automationRules.filter(r => r.enabled && r.trigger.type === 'status_change' && r.trigger.status === status);
+      for (const rule of triggeredRules) {
+        if (rule.action.type === 'create_task') {
+          const dueDate = new Date();
+          dueDate.setDate(dueDate.getDate() + rule.action.daysOffset);
+          
+          await addDoc(collection(db, 'tasks'), {
+            ownerId: user!.uid,
+            leadId: id,
+            title: rule.action.taskTitle,
+            priority: rule.action.taskPriority,
+            dueDate: dueDate.toISOString().split('T')[0],
+            completed: false,
+            createdAt: new Date().toISOString(),
+          });
+          toast.info(`Automation: Task "${rule.action.taskTitle}" created`);
+        }
+      }
     } catch (error) {
       console.error(error);
+      toast.error('Failed to update status');
     }
   };
 
@@ -1019,9 +1415,15 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <Toaster position="top-right" richColors />
+      {profile && !profile.onboardingCompleted && (
+        <OnboardingTour onComplete={async () => {
+          await updateDoc(doc(db, 'profiles', user!.uid), { onboardingCompleted: true });
+        }} />
+      )}
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/" element={<DashboardScreen leads={leads} tasks={tasks} />} />
+          <Route path="/" element={<DashboardScreen leads={leads} tasks={tasks} onSelectLead={setSelectedLead} />} />
           <Route path="/leads" element={
             <LeadsScreen 
               leads={leads} 
@@ -1030,12 +1432,13 @@ export default function App() {
               onSelectLead={setSelectedLead}
               businessType={businessProfile.businessType}
               offer={businessProfile.offer}
+              user={user}
             />
           } />
           <Route path="/finder" element={<FinderScreen onSaveLead={handleSaveLead} savedUsernames={savedUsernames} />} />
           <Route path="/ai-writer" element={<AIWriterScreen user={user} businessProfile={businessProfile} />} />
           <Route path="/chat" element={<ChatScreen />} />
-          <Route path="/settings" element={<SettingsScreen user={user} />} />
+          <Route path="/settings" element={<SettingsScreen user={user} rules={automationRules} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

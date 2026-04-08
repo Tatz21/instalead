@@ -23,6 +23,8 @@ export interface Task {
   ownerId: string;
   leadId: string;
   title: string;
+  description?: string;
+  priority: 'low' | 'medium' | 'high';
   dueDate: string;
   completed: boolean;
   createdAt: string;
@@ -35,10 +37,30 @@ export interface UserProfile {
   photoURL?: string;
   role: 'user' | 'admin';
   createdAt: string;
+  updatedAt: string;
+  onboardingCompleted?: boolean;
   settings: {
     theme: 'light' | 'dark';
     apiKeys: Record<string, string>;
   };
+}
+
+export interface AutomationRule {
+  id: string;
+  ownerId: string;
+  name: string;
+  trigger: {
+    type: 'status_change';
+    status: LeadStatus;
+  };
+  action: {
+    type: 'create_task';
+    taskTitle: string;
+    taskPriority: 'low' | 'medium' | 'high';
+    daysOffset: number;
+  };
+  enabled: boolean;
+  createdAt: string;
 }
 
 export interface OutreachMessage {

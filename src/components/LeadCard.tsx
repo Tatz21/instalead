@@ -26,9 +26,21 @@ export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProp
             <p className="text-xs text-muted-foreground">{lead.fullName}</p>
           </div>
         </div>
-        <button className="p-2 hover:bg-accent rounded-full transition-colors">
-          <MoreVertical className="w-4 h-4 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-2">
+          {lead.aiScore !== undefined && (
+            <div className={cn(
+              "w-10 h-10 rounded-xl flex flex-col items-center justify-center text-[10px] font-bold border",
+              lead.aiScore > 70 ? "bg-green-500/10 text-green-500 border-green-500/20" : 
+              lead.aiScore > 40 ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"
+            )}>
+              <span className="text-[8px] opacity-70">SCORE</span>
+              {lead.aiScore}
+            </div>
+          )}
+          <button className="p-2 hover:bg-accent rounded-full transition-colors">
+            <MoreVertical className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
       </div>
 
       <p className="text-sm text-muted-foreground line-clamp-2 mb-4 italic">
