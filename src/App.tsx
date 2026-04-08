@@ -391,7 +391,19 @@ function LeadsScreen({
     }
   };
 
-  const filteredLeads = filter === 'all' ? leads : leads.filter(l => l.status === filter);
+  const filteredLeads = leads
+    .filter(l => filter === 'all' ? true : l.status === filter)
+    .filter(l => {
+      const query = searchQuery.toLowerCase();
+      return l.username.toLowerCase().includes(query) || 
+             (l.fullName && l.fullName.toLowerCase().includes(query)) ||
+             (l.tags && l.tags.some(t => t.toLowerCase().includes(query)));
+    })
+    .sort((a, b) => {
+      if (sortBy === 'score') return (b.aiScore || 0) - (a.aiScore || 0);
+      if (sortBy === 'followers') return (b.followers || 0) - (a.followers || 0);
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredLeads.length) {
@@ -426,6 +438,8 @@ function LeadsScreen({
   const [scoringBulk, setScoringBulk] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [showTagInput, setShowTagInput] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'score' | 'followers'>('date');
 
   const handleBulkTag = async () => {
     if (!tagInput) return;
@@ -498,6 +512,30 @@ function LeadsScreen({
           </div>
         </div>
       </header>
+
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by username, name or tag..." 
+            className="w-full bg-card border border-border rounded-xl py-2.5 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary transition-all" 
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-muted-foreground whitespace-nowrap">Sort by:</span>
+          <select 
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="bg-card border border-border rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-primary transition-all"
+          >
+            <option value="date">Date Added</option>
+            <option value="score">AI Score</option>
+            <option value="followers">Followers</option>
+          </select>
+        </div>
+      </div>
 
       {selectedIds.size > 0 && (
         <motion.div 
