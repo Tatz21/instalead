@@ -7,6 +7,7 @@ import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc
 import { db } from '../lib/firebase';
 import { scoreLead } from '../services/aiService';
 import { toast } from 'sonner';
+import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
 interface LeadDetailsModalProps {
   lead: Lead;
@@ -40,8 +41,7 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
       });
       toast.success('Notes saved');
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to save notes');
+      handleFirestoreError(error, OperationType.WRITE, `leads/${lead.id}`);
     } finally {
       setSavingNotes(false);
     }
@@ -53,13 +53,16 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
   };
 
   useEffect(() => {
-    const q = query(collection(db, 'tasks'), where('leadId', '==', lead.id));
+    const path = 'tasks';
+    const q = query(collection(db, path), where('leadId', '==', lead.id), where('ownerId', '==', lead.ownerId));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Task[];
       setTasks(data.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, path);
     });
     return () => unsubscribe();
-  }, [lead.id]);
+  }, [lead.id, lead.ownerId]);
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,7 +83,7 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
       setNewTaskPriority('medium');
       setNewTaskDate('');
     } catch (error) {
-      console.error(error);
+      handleFirestoreError(error, OperationType.WRITE, 'tasks');
     }
   };
 
@@ -88,7 +91,7 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
     try {
       await updateDoc(doc(db, 'tasks', task.id), { completed: !task.completed });
     } catch (error) {
-      console.error(error);
+      handleFirestoreError(error, OperationType.WRITE, `tasks/${task.id}`);
     }
   };
 
@@ -96,7 +99,7 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
     try {
       await deleteDoc(doc(db, 'tasks', id));
     } catch (error) {
-      console.error(error);
+      handleFirestoreError(error, OperationType.DELETE, `tasks/${id}`);
     }
   };
 
@@ -121,7 +124,7 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
         updatedAt: new Date().toISOString()
       });
     } catch (error) {
-      console.error(error);
+      handleFirestoreError(error, OperationType.WRITE, `leads/${lead.id}`);
     } finally {
       setScoring(false);
     }

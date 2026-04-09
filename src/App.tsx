@@ -25,6 +25,7 @@ import { cn, formatNumber } from './lib/utils';
 import { Lead, LeadStatus, OutreachMessage, UserProfile, Task, AutomationRule } from './types';
 import { googleMapsService } from './services/googleMapsService';
 import { generateOutreachMessage, scoreLead } from './services/aiService';
+import { handleFirestoreError, OperationType } from './lib/firestore-errors';
 
 import Layout from './components/Layout';
 import StatsCard from './components/StatsCard';
@@ -397,8 +398,7 @@ function LeadsScreen({
           }
           toast.success(`Successfully imported ${count} leads`);
         } catch (error) {
-          console.error(error);
-          toast.error('Failed to import leads');
+          handleFirestoreError(error, OperationType.WRITE, 'leads');
         } finally {
           setImporting(false);
         }
@@ -427,8 +427,7 @@ function LeadsScreen({
       toast.success(`Generated messages for ${selectedLeads.length} leads`);
       setSelectedIds(new Set());
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to generate bulk messages');
+      handleFirestoreError(error, OperationType.WRITE, 'messages');
     } finally {
       setMessagingBulk(false);
     }
@@ -494,7 +493,7 @@ function LeadsScreen({
       setShowTagInput(false);
       setSelectedIds(new Set());
     } catch (error) {
-      console.error(error);
+      handleFirestoreError(error, OperationType.WRITE, 'leads');
     }
   };
   const handleBulkScore = async () => {
@@ -522,7 +521,7 @@ function LeadsScreen({
       }
       setSelectedIds(new Set());
     } catch (error) {
-      console.error(error);
+      handleFirestoreError(error, OperationType.WRITE, 'leads');
     } finally {
       setScoringBulk(false);
     }
@@ -973,8 +972,7 @@ function AIWriterScreen({ user, businessProfile }: { user: FirebaseUser, busines
       }, { merge: true });
       toast.success('Business profile saved');
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to save profile');
+      handleFirestoreError(error, OperationType.WRITE, `profiles/${user.uid}`);
     } finally {
       setSaving(false);
     }
@@ -1249,8 +1247,7 @@ function SettingsScreen({ user, rules }: { user: FirebaseUser, rules: Automation
       setNewRuleTaskTitle('');
       toast.success('Automation rule added');
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to add rule');
+      handleFirestoreError(error, OperationType.WRITE, 'automationRules');
     } finally {
       setAddingRule(false);
     }
@@ -1261,7 +1258,7 @@ function SettingsScreen({ user, rules }: { user: FirebaseUser, rules: Automation
       await updateDoc(doc(db, 'automationRules', rule.id), { enabled: !rule.enabled });
       toast.success(`Rule ${!rule.enabled ? 'enabled' : 'disabled'}`);
     } catch (error) {
-      console.error(error);
+      handleFirestoreError(error, OperationType.WRITE, `automationRules/${rule.id}`);
     }
   };
 
@@ -1270,7 +1267,7 @@ function SettingsScreen({ user, rules }: { user: FirebaseUser, rules: Automation
       await deleteDoc(doc(db, 'automationRules', id));
       toast.success('Rule deleted');
     } catch (error) {
-      console.error(error);
+      handleFirestoreError(error, OperationType.DELETE, `automationRules/${id}`);
     }
   };
 
@@ -1457,12 +1454,16 @@ export default function App() {
     const unsubLeads = onSnapshot(qLeads, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Lead[];
       setLeads(data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'leads');
     });
 
     const qTasks = query(collection(db, 'tasks'), where('ownerId', '==', user.uid), where('completed', '==', false));
     const unsubTasks = onSnapshot(qTasks, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Task[];
       setTasks(data.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'tasks');
     });
 
     // Fetch business profile and user profile
@@ -1491,14 +1492,25 @@ export default function App() {
             apiKeys: {}
           }
         };
-        setDoc(profileRef, newProfile);
+        const initProfile = async () => {
+          try {
+            await setDoc(profileRef, newProfile);
+          } catch (error) {
+            handleFirestoreError(error, OperationType.WRITE, `profiles/${user.uid}`);
+          }
+        };
+        initProfile();
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, `profiles/${user.uid}`);
     });
 
     const qRules = query(collection(db, 'automationRules'), where('ownerId', '==', user.uid));
     const unsubRules = onSnapshot(qRules, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as AutomationRule[];
       setAutomationRules(data);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'automationRules');
     });
 
     return () => {
@@ -1542,7 +1554,7 @@ export default function App() {
         updatedAt: new Date().toISOString(),
       });
     } catch (error) {
-      console.error(error);
+      handleFirestoreError(error, OperationType.WRITE, 'leads');
     }
   };
 
@@ -1574,8 +1586,7 @@ export default function App() {
         }
       }
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to update status');
+      handleFirestoreError(error, OperationType.WRITE, `leads/${id}`);
     }
   };
 
@@ -1583,7 +1594,7 @@ export default function App() {
     try {
       await deleteDoc(doc(db, 'leads', id));
     } catch (error) {
-      console.error(error);
+      handleFirestoreError(error, OperationType.DELETE, `leads/${id}`);
     }
   };
 
@@ -1610,7 +1621,11 @@ export default function App() {
       <Toaster position="top-right" richColors />
       {profile && !profile.onboardingCompleted && (
         <OnboardingTour onComplete={async () => {
-          await updateDoc(doc(db, 'profiles', user!.uid), { onboardingCompleted: true });
+          try {
+            await updateDoc(doc(db, 'profiles', user!.uid), { onboardingCompleted: true });
+          } catch (error) {
+            handleFirestoreError(error, OperationType.WRITE, `profiles/${user!.uid}`);
+          }
         }} />
       )}
       <Routes>
