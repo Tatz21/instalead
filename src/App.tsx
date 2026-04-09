@@ -218,12 +218,14 @@ function FinderScreen({ onSaveLead, savedNames }: { onSaveLead: (lead: Partial<L
   const [loadingMore, setLoadingMore] = useState(false);
   const [results, setResults] = useState<Partial<Lead>[]>([]);
   const [page, setPage] = useState(1);
+  const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set());
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!keyword) return;
     setLoading(true);
     setPage(1);
+    setSelectedNames(new Set());
     try {
       const data = await googleMapsService.searchLeads(keyword, location, 1);
       setResults(data);
@@ -250,11 +252,49 @@ function FinderScreen({ onSaveLead, savedNames }: { onSaveLead: (lead: Partial<L
     }
   };
 
+  const toggleSelect = (name: string) => {
+    const newSelected = new Set(selectedNames);
+    if (newSelected.has(name)) {
+      newSelected.delete(name);
+    } else {
+      newSelected.add(name);
+    }
+    setSelectedNames(newSelected);
+  };
+
+  const handleSaveSelected = async () => {
+    const toSave = results.filter(r => r.name && selectedNames.has(r.name) && !savedNames.has(r.name));
+    if (toSave.length === 0) return;
+    
+    toast.promise(
+      Promise.all(toSave.map(lead => onSaveLead(lead))),
+      {
+        loading: `Saving ${toSave.length} leads...`,
+        success: `Successfully saved ${toSave.length} leads`,
+        error: 'Failed to save some leads'
+      }
+    );
+    setSelectedNames(new Set());
+  };
+
   return (
     <div className="space-y-8" data-tour="finder">
-      <header>
-        <h2 className="text-3xl font-display font-bold tracking-tight">Lead Finder</h2>
-        <p className="text-muted-foreground">Search Google Maps for potential business leads.</p>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-display font-bold tracking-tight">Lead Finder</h2>
+          <p className="text-muted-foreground">Search Google Maps for potential business leads.</p>
+        </div>
+        {selectedNames.size > 0 && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            onClick={handleSaveSelected}
+            className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Save Selected ({selectedNames.size})
+          </motion.button>
+        )}
       </header>
 
       <form onSubmit={handleSearch} className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-4">
@@ -302,7 +342,16 @@ function FinderScreen({ onSaveLead, savedNames }: { onSaveLead: (lead: Partial<L
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: (i % 20) * 0.05 }}
+              className="relative"
             >
+              <div className="absolute top-4 left-4 z-10">
+                <button 
+                  onClick={() => toggleSelect(lead.name!)}
+                  className="text-muted-foreground hover:text-primary transition-colors bg-background/80 backdrop-blur-sm rounded-lg p-1"
+                >
+                  {selectedNames.has(lead.name!) ? <CheckSquare className="w-5 h-5 text-primary" /> : <Square className="w-5 h-5" />}
+                </button>
+              </div>
               <LeadCard 
                 lead={lead} 
                 onSave={() => onSaveLead(lead)} 
@@ -605,10 +654,15 @@ function LeadsScreen({
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4"
+          className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex flex-col lg:flex-row items-center justify-between gap-4"
         >
-          <p className="text-sm font-bold text-primary">{selectedIds.size} leads selected</p>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-4">
+            <div className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+              Bulk Actions
+            </div>
+            <p className="text-sm font-bold text-primary">{selectedIds.size} leads selected</p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2 w-full lg:w-auto">
             {showTagInput ? (
               <div className="flex items-center gap-2 flex-1 sm:flex-none">
                 <input 
@@ -960,6 +1014,23 @@ function AIWriterScreen({ user, businessProfile }: { user: FirebaseUser, busines
   useEffect(() => {
     setBusinessType(businessProfile.businessType);
     setOffer(businessProfile.offer);
+    
+    // Auto-generate if both are present and messages haven't been generated yet
+    if (businessProfile.businessType && businessProfile.offer && !messages && !loading) {
+      const autoGen = async () => {
+        setLoading(true);
+        try {
+          const result = await generateOutreachMessage(businessProfile.businessType, businessProfile.offer, tone);
+          setMessages(result);
+          toast.success('Messages auto-generated from your profile');
+        } catch (error) {
+          console.error('Auto-generation failed:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      autoGen();
+    }
   }, [businessProfile]);
 
   const handleSaveProfile = async () => {

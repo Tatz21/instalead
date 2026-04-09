@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, MapPin, Phone, Globe, Star, Tag, Calendar, MessageSquare, Trash2, CheckCircle2, Clock, Plus, BarChart3, RefreshCw, Save, Zap, Copy } from 'lucide-react';
+import { X, MapPin, Phone, Globe, Star, Tag, Calendar, MessageSquare, Trash2, CheckCircle2, Clock, Plus, BarChart3, RefreshCw, Save, Zap, Copy, ArrowRight } from 'lucide-react';
 import { Lead, LeadStatus, Task } from '../types';
 import { cn, formatNumber } from '../lib/utils';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
@@ -419,14 +419,17 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
                         <p className={cn("text-sm font-medium truncate", task.completed && "line-through")}>
                           {task.title}
                         </p>
-                        <span className={cn(
-                          "text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase",
+                        <div className={cn(
+                          "flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase",
                           task.priority === 'high' ? "bg-red-500/10 text-red-500" :
                           task.priority === 'medium' ? "bg-yellow-500/10 text-yellow-500" :
                           "bg-blue-500/10 text-blue-500"
                         )}>
+                          {task.priority === 'high' && <Zap className="w-2 h-2" />}
+                          {task.priority === 'medium' && <Clock className="w-2 h-2" />}
+                          {task.priority === 'low' && <ArrowRight className="w-2 h-2" />}
                           {task.priority}
-                        </span>
+                        </div>
                       </div>
                       {task.description && (
                         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{task.description}</p>

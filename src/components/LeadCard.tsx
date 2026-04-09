@@ -29,8 +29,16 @@ export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProp
             <MapPin className="w-6 h-6 text-muted-foreground" />
           </div>
           <div className="min-w-0">
-            <h3 className="font-bold text-foreground flex items-center gap-1 truncate">
-              {lead.name}
+            <h3 className="font-bold text-foreground flex items-center gap-2 truncate">
+              <div className={cn(
+                "w-2 h-2 rounded-full shrink-0",
+                lead.status === 'new' ? "bg-blue-500" :
+                lead.status === 'contacted' ? "bg-yellow-500" :
+                lead.status === 'replied' ? "bg-purple-500" :
+                lead.status === 'converted' ? "bg-green-500" :
+                lead.status === 'lost' ? "bg-red-500" : "bg-muted"
+              )} />
+              <span className="truncate">{lead.name}</span>
               <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </h3>
             <div className="flex items-center gap-1 min-w-0">
