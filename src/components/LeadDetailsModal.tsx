@@ -381,28 +381,47 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
                   rows={2}
                   className="w-full bg-accent/50 border border-border rounded-xl py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
                 />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Priority</label>
+                  <div className="flex gap-2 p-1 bg-accent/30 rounded-xl border border-border">
+                    {(['low', 'medium', 'high'] as const).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setNewTaskPriority(p)}
+                        className={cn(
+                          "flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase",
+                          newTaskPriority === p 
+                            ? p === 'high' ? "bg-red-500 text-white shadow-lg shadow-red-500/20" :
+                              p === 'medium' ? "bg-yellow-500 text-white shadow-lg shadow-yellow-500/20" :
+                              "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
+                            : "text-muted-foreground hover:bg-accent"
+                        )}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="flex gap-2">
-                  <select
-                    value={newTaskPriority}
-                    onChange={e => setNewTaskPriority(e.target.value as any)}
-                    className="flex-1 bg-accent/50 border border-border rounded-xl py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
-                  >
-                    <option value="low">Low Priority</option>
-                    <option value="medium">Medium Priority</option>
-                    <option value="high">High Priority</option>
-                  </select>
-                  <input 
-                    type="date"
-                    value={newTaskDate}
-                    onChange={e => setNewTaskDate(e.target.value)}
-                    className="flex-1 bg-accent/50 border border-border rounded-xl py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
-                  />
-                  <button 
-                    type="submit"
-                    className="p-2 bg-primary text-primary-foreground rounded-xl hover:scale-105 transition-all"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
+                  <div className="flex-1 space-y-1">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Due Date</label>
+                    <input 
+                      type="date"
+                      value={newTaskDate}
+                      onChange={e => setNewTaskDate(e.target.value)}
+                      className="w-full bg-accent/50 border border-border rounded-xl py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button 
+                      type="submit"
+                      className="h-[38px] px-6 bg-primary text-primary-foreground rounded-xl font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add
+                    </button>
+                  </div>
                 </div>
               </form>
 
