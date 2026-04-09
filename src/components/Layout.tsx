@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, MapPin, PenTool, Settings, MessageCircle } from 'lucide-react';
+import { LayoutDashboard, Users, MapPin, PenTool, Settings, MessageCircle, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -9,6 +9,7 @@ const navItems = [
   { icon: Users, label: 'Leads', path: '/leads', tour: 'leads' },
   { icon: MapPin, label: 'Finder', path: '/finder', tour: 'finder' },
   { icon: PenTool, label: 'AI Writer', path: '/ai-writer', tour: 'writer' },
+  { icon: Zap, label: 'Automation', path: '/automation', tour: 'automation' },
   { icon: MessageCircle, label: 'Chat', path: '/chat', tour: 'chat' },
   { icon: Settings, label: 'Settings', path: '/settings', tour: 'settings' },
 ];

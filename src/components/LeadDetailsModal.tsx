@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, MapPin, Phone, Globe, Star, Tag, Calendar, MessageSquare, Trash2, CheckCircle2, Clock, Plus, BarChart3, RefreshCw, Save, Zap, Copy, ArrowRight } from 'lucide-react';
+import { X, MapPin, Phone, Globe, Star, Tag, Calendar, MessageSquare, Trash2, CheckCircle2, Clock, Plus, BarChart3, RefreshCw, Save, Zap, Copy, ArrowRight, HelpCircle } from 'lucide-react';
 import { Lead, LeadStatus, Task } from '../types';
 import { cn, formatNumber } from '../lib/utils';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
@@ -194,7 +194,17 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
                           {lead.aiScore}
                         </div>
                         <div>
-                          <p className="text-sm font-bold">Lead Score</p>
+                          <div className="flex items-center gap-1.5 group/tooltip relative">
+                            <p className="text-sm font-bold">Lead Score</p>
+                            <HelpCircle className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                            <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-popover border border-border rounded-lg shadow-xl text-[10px] leading-tight text-popover-foreground opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all z-50">
+                              <p className="font-bold mb-1">Scoring Framework:</p>
+                              <ul className="space-y-1 list-disc list-inside">
+                                <li><span className="font-bold">Relevance:</span> Match with your business type and offer.</li>
+                                <li><span className="font-bold">Growth Potential:</span> Market presence and review trends.</li>
+                              </ul>
+                            </div>
+                          </div>
                           <p className="text-xs text-muted-foreground">Based on business relevance</p>
                         </div>
                       </div>

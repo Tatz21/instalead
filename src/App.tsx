@@ -1284,8 +1284,8 @@ function ChatScreen() {
   );
 }
 
-// --- Settings Screen ---
-function SettingsScreen({ user, rules }: { user: FirebaseUser, rules: AutomationRule[] }) {
+// --- Automation Screen ---
+function AutomationScreen({ user, rules }: { user: FirebaseUser, rules: AutomationRule[] }) {
   const [newRuleName, setNewRuleName] = useState('');
   const [newRuleTriggerStatus, setNewRuleTriggerStatus] = useState<LeadStatus>('replied');
   const [newRuleTaskTitle, setNewRuleTaskTitle] = useState('');
@@ -1343,155 +1343,235 @@ function SettingsScreen({ user, rules }: { user: FirebaseUser, rules: Automation
   };
 
   return (
-    <div className="space-y-8" data-tour="settings">
+    <div className="space-y-8" data-tour="automation">
       <header>
-        <h2 className="text-3xl font-display font-bold tracking-tight">Settings</h2>
-        <p className="text-muted-foreground">Manage your account and preferences.</p>
+        <h2 className="text-3xl font-display font-bold tracking-tight">Automation</h2>
+        <p className="text-muted-foreground">Automate your workflow with status-based triggers.</p>
       </header>
 
-      <div className="max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-6">
-          <div className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-6">
-            <h3 className="text-xl font-bold">Profile</h3>
-            <div className="flex items-center gap-4">
-              <img src={user.photoURL || ''} alt="" className="w-16 h-16 rounded-2xl border border-border" />
-              <div>
-                <p className="font-bold text-lg">{user.displayName}</p>
-                <p className="text-sm text-muted-foreground">{user.email}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-6">
-            <h3 className="text-xl font-bold">Preferences</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-bold">Dark Mode</p>
-                  <p className="text-xs text-muted-foreground">Toggle between light and dark theme</p>
-                </div>
-                <div className="w-12 h-6 bg-primary rounded-full relative cursor-pointer">
-                  <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-1">
+          <form onSubmit={handleAddRule} className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-6 sticky top-8">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold">Automation Rules</h3>
-              <Zap className="w-5 h-5 text-primary" />
+              <h3 className="text-xl font-bold">New Rule</h3>
+              <Plus className="w-5 h-5 text-primary" />
             </div>
             
-            <form onSubmit={handleAddRule} className="space-y-3 p-4 bg-accent/20 rounded-2xl border border-border">
-              <p className="text-xs font-bold uppercase text-muted-foreground">Add New Rule</p>
-              <input 
-                value={newRuleName}
-                onChange={e => setNewRuleName(e.target.value)}
-                placeholder="Rule Name (e.g. Follow-up on Reply)"
-                className="w-full bg-background border border-border rounded-xl py-2 px-3 text-sm outline-none"
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-muted-foreground">IF STATUS IS</label>
-                  <select 
-                    value={newRuleTriggerStatus}
-                    onChange={e => setNewRuleTriggerStatus(e.target.value as any)}
-                    className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none"
-                  >
-                    <option value="new">NEW</option>
-                    <option value="contacted">CONTACTED</option>
-                    <option value="replied">REPLIED</option>
-                    <option value="converted">CONVERTED</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-muted-foreground">THEN CREATE TASK</label>
-                  <input 
-                    value={newRuleTaskTitle}
-                    onChange={e => setNewRuleTaskTitle(e.target.value)}
-                    placeholder="Task Title"
-                    className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none"
-                  />
-                </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-muted-foreground">Rule Name</label>
+                <input 
+                  value={newRuleName}
+                  onChange={e => setNewRuleName(e.target.value)}
+                  placeholder="e.g. Follow-up on Reply"
+                  className="w-full bg-accent/30 border border-border rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
+                />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-muted-foreground">PRIORITY</label>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-muted-foreground">If Status Changes To</label>
+                <select 
+                  value={newRuleTriggerStatus}
+                  onChange={e => setNewRuleTriggerStatus(e.target.value as any)}
+                  className="w-full bg-accent/30 border border-border rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
+                >
+                  <option value="new">NEW</option>
+                  <option value="contacted">CONTACTED</option>
+                  <option value="replied">REPLIED</option>
+                  <option value="converted">CONVERTED</option>
+                  <option value="lost">LOST</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-muted-foreground">Then Create Task</label>
+                <input 
+                  value={newRuleTaskTitle}
+                  onChange={e => setNewRuleTaskTitle(e.target.value)}
+                  placeholder="Task Title"
+                  className="w-full bg-accent/30 border border-border rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">Priority</label>
                   <select 
                     value={newRuleTaskPriority}
                     onChange={e => setNewRuleTaskPriority(e.target.value as any)}
-                    className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none"
+                    className="w-full bg-accent/30 border border-border rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
                   >
                     <option value="low">LOW</option>
                     <option value="medium">MEDIUM</option>
                     <option value="high">HIGH</option>
                   </select>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-muted-foreground">DAYS OFFSET</label>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">Days Offset</label>
                   <input 
                     type="number"
+                    min="0"
                     value={newRuleDaysOffset}
                     onChange={e => setNewRuleDaysOffset(parseInt(e.target.value))}
-                    className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none"
+                    className="w-full bg-accent/30 border border-border rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
                   />
                 </div>
               </div>
-              <button 
-                type="submit"
-                disabled={addingRule}
-                className="w-full py-2 bg-primary text-primary-foreground rounded-xl font-bold text-xs hover:scale-[1.02] transition-all"
-              >
-                {addingRule ? 'Adding...' : 'Add Rule'}
-              </button>
-            </form>
+            </div>
 
-            <div className="space-y-3">
-              {rules.map(rule => (
-                <div key={rule.id} className="flex items-center justify-between p-3 bg-accent/10 border border-border rounded-2xl">
-                  <div>
-                    <p className="text-sm font-bold">{rule.name}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      If {rule.trigger.status} → Create "{rule.action.taskTitle}" (+{rule.action.daysOffset}d)
-                    </p>
+            <button 
+              type="submit"
+              disabled={addingRule}
+              className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+            >
+              {addingRule ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+              {addingRule ? 'Adding...' : 'Add Automation Rule'}
+            </button>
+          </form>
+        </div>
+
+        <div className="lg:col-span-2 space-y-4">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            Active Rules
+            <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">{rules.length}</span>
+          </h3>
+          <div className="grid grid-cols-1 gap-4">
+            {rules.map(rule => (
+              <motion.div 
+                key={rule.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-card border border-border rounded-3xl p-6 shadow-lg flex items-center justify-between group hover:border-primary/50 transition-all"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "w-12 h-12 rounded-2xl flex items-center justify-center",
+                    rule.enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                  )}>
+                    <Zap className="w-6 h-6" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => toggleRule(rule)}
-                      className={cn(
-                        "w-10 h-5 rounded-full relative transition-all",
-                        rule.enabled ? "bg-primary" : "bg-muted"
-                      )}
-                    >
-                      <div className={cn(
-                        "absolute top-1 w-3 h-3 bg-white rounded-full transition-all",
-                        rule.enabled ? "right-1" : "left-1"
-                      )} />
-                    </button>
-                    <button onClick={() => deleteRule(rule.id)} className="p-1.5 hover:bg-destructive/10 rounded-lg text-muted-foreground hover:text-destructive">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  <div>
+                    <p className="font-bold text-lg">{rule.name}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span className="bg-accent px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase">{rule.trigger.status}</span>
+                      <ArrowRight className="w-3 h-3" />
+                      <span>Create "{rule.action.taskTitle}"</span>
+                      <span className="text-[10px] opacity-70">(+{rule.action.daysOffset}d)</span>
+                    </div>
                   </div>
                 </div>
-              ))}
-              {rules.length === 0 && (
-                <p className="text-center py-8 text-xs text-muted-foreground opacity-50 italic">No automation rules yet</p>
-              )}
-            </div>
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => toggleRule(rule)}
+                    className={cn(
+                      "w-12 h-6 rounded-full relative transition-all duration-300",
+                      rule.enabled ? "bg-primary" : "bg-muted"
+                    )}
+                  >
+                    <div className={cn(
+                      "absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-sm",
+                      rule.enabled ? "right-1" : "left-1"
+                    )} />
+                  </button>
+                  <button 
+                    onClick={() => deleteRule(rule.id)}
+                    className="p-2 hover:bg-destructive/10 rounded-xl text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+            {rules.length === 0 && (
+              <div className="py-20 text-center bg-accent/10 rounded-3xl border border-dashed border-border">
+                <Zap className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-10" />
+                <p className="text-muted-foreground">No automation rules configured yet.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
 
-      <div className="max-w-2xl">
+// --- Settings Screen ---
+function SettingsScreen({ user, profile }: { user: FirebaseUser, profile: UserProfile | null }) {
+  const toggleTheme = async () => {
+    if (!profile) return;
+    const newTheme = profile.settings?.theme === 'dark' ? 'light' : 'dark';
+    try {
+      await updateDoc(doc(db, 'profiles', user.uid), {
+        'settings.theme': newTheme,
+        updatedAt: new Date().toISOString()
+      });
+      toast.success(`Theme switched to ${newTheme} mode`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `profiles/${user.uid}`);
+    }
+  };
+
+  return (
+    <div className="space-y-8" data-tour="settings">
+      <header>
+        <h2 className="text-3xl font-display font-bold tracking-tight">Settings</h2>
+        <p className="text-muted-foreground">Manage your account and preferences.</p>
+      </header>
+
+      <div className="max-w-2xl space-y-6">
+        <div className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-6">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary" />
+            Profile Information
+          </h3>
+          <div className="flex items-center gap-6 p-4 bg-accent/20 rounded-2xl border border-border">
+            <img src={user.photoURL || ''} alt="" className="w-20 h-20 rounded-3xl border-2 border-primary/20 shadow-lg" />
+            <div>
+              <p className="font-bold text-xl">{user.displayName}</p>
+              <p className="text-muted-foreground">{user.email}</p>
+              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold uppercase tracking-wider">
+                <Lock className="w-3 h-3" />
+                {profile?.role || 'User'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-6">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <Settings className="w-5 h-5 text-primary" />
+            App Preferences
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-accent/20 rounded-2xl border border-border group hover:border-primary/50 transition-all">
+              <div>
+                <p className="font-bold">Theme Mode</p>
+                <p className="text-xs text-muted-foreground">Switch between light and dark interface</p>
+              </div>
+              <button 
+                onClick={toggleTheme}
+                className={cn(
+                  "w-14 h-7 rounded-full relative transition-all duration-300 shadow-inner",
+                  profile?.settings?.theme === 'dark' ? "bg-primary" : "bg-muted"
+                )}
+              >
+                <div className={cn(
+                  "absolute top-1 w-5 h-5 bg-white rounded-full transition-all duration-300 shadow-md flex items-center justify-center",
+                  profile?.settings?.theme === 'dark' ? "right-1" : "left-1"
+                )}>
+                  {profile?.settings?.theme === 'dark' ? <Clock className="w-3 h-3 text-primary" /> : <RefreshCw className="w-3 h-3 text-muted-foreground" />}
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <button 
           onClick={() => signOut(auth)}
-          className="w-full py-4 bg-destructive/10 text-destructive rounded-2xl font-bold hover:bg-destructive/20 transition-all flex items-center justify-center gap-2"
+          className="w-full py-4 bg-destructive/10 text-destructive rounded-3xl font-bold hover:bg-destructive/20 transition-all flex items-center justify-center gap-2 group"
         >
-          <LogOut className="w-5 h-5" />
-          Sign Out
+          <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+          Sign Out of Account
         </button>
       </div>
     </div>
@@ -1521,6 +1601,15 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
+    
+    // Apply theme
+    const theme = profile?.settings?.theme || 'dark';
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+
     const qLeads = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
     const unsubLeads = onSnapshot(qLeads, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Lead[];
@@ -1715,8 +1804,9 @@ export default function App() {
           } />
           <Route path="/finder" element={<FinderScreen onSaveLead={handleSaveLead} savedNames={savedNames} />} />
           <Route path="/ai-writer" element={<AIWriterScreen user={user} businessProfile={businessProfile} />} />
+          <Route path="/automation" element={<AutomationScreen user={user} rules={automationRules} />} />
           <Route path="/chat" element={<ChatScreen />} />
-          <Route path="/settings" element={<SettingsScreen user={user} rules={automationRules} />} />
+          <Route path="/settings" element={<SettingsScreen user={user} profile={profile} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

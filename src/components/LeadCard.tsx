@@ -30,14 +30,18 @@ export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProp
           </div>
           <div className="min-w-0">
             <h3 className="font-bold text-foreground flex items-center gap-2 truncate">
-              <div className={cn(
-                "w-2 h-2 rounded-full shrink-0",
-                lead.status === 'new' ? "bg-blue-500" :
-                lead.status === 'contacted' ? "bg-yellow-500" :
-                lead.status === 'replied' ? "bg-purple-500" :
-                lead.status === 'converted' ? "bg-green-500" :
-                lead.status === 'lost' ? "bg-red-500" : "bg-muted"
-              )} />
+              {lead.status && (
+                <div className={cn(
+                  "px-1.5 py-0.5 rounded-md text-[8px] font-bold uppercase shrink-0",
+                  lead.status === 'new' ? "bg-blue-500/20 text-blue-500 border border-blue-500/30" :
+                  lead.status === 'contacted' ? "bg-yellow-500/20 text-yellow-500 border border-yellow-500/30" :
+                  lead.status === 'replied' ? "bg-purple-500/20 text-purple-500 border border-purple-500/30" :
+                  lead.status === 'converted' ? "bg-green-500/20 text-green-500 border border-green-500/30" :
+                  lead.status === 'lost' ? "bg-red-500/20 text-red-500 border border-red-500/30" : "bg-muted text-muted-foreground"
+                )}>
+                  {lead.status}
+                </div>
+              )}
               <span className="truncate">{lead.name}</span>
               <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </h3>
