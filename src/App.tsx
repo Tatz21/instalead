@@ -1602,14 +1602,6 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     
-    // Apply theme
-    const theme = profile?.settings?.theme || 'dark';
-    if (theme === 'light') {
-      document.documentElement.classList.add('light');
-    } else {
-      document.documentElement.classList.remove('light');
-    }
-
     const qLeads = query(collection(db, 'leads'), where('ownerId', '==', user.uid));
     const unsubLeads = onSnapshot(qLeads, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Lead[];
@@ -1680,6 +1672,29 @@ export default function App() {
       unsubRules();
     };
   }, [user]);
+
+  useEffect(() => {
+    const theme = profile?.settings?.theme || 'dark';
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+  }, [profile]);
+
+  const toggleTheme = async () => {
+    if (!user || !profile) return;
+    const newTheme = profile.settings?.theme === 'dark' ? 'light' : 'dark';
+    try {
+      await updateDoc(doc(db, 'profiles', user.uid), {
+        'settings.theme': newTheme,
+        updatedAt: new Date().toISOString()
+      });
+      toast.success(`Theme switched to ${newTheme} mode`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `profiles/${user.uid}`);
+    }
+  };
 
   const handleSaveLead = async (leadData: Partial<Lead>) => {
     if (!user) return;
@@ -1789,7 +1804,7 @@ export default function App() {
         }} />
       )}
       <Routes>
-        <Route element={<Layout />}>
+        <Route element={<Layout theme={profile?.settings?.theme || 'dark'} onToggleTheme={toggleTheme} />}>
           <Route path="/" element={<DashboardScreen leads={leads} tasks={tasks} onSelectLead={setSelectedLead} />} />
           <Route path="/leads" element={
             <LeadsScreen 
