@@ -1765,6 +1765,18 @@ export default function App() {
     }
   };
 
+  const handleUpdateLead = async (id: string, data: Partial<Lead>) => {
+    try {
+      await updateDoc(doc(db, 'leads', id), {
+        ...data,
+        updatedAt: new Date().toISOString()
+      });
+      toast.success('Lead updated');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `leads/${id}`);
+    }
+  };
+
   const handleDeleteLead = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'leads', id));
@@ -1832,6 +1844,7 @@ export default function App() {
             lead={selectedLead}
             onClose={() => setSelectedLead(null)}
             onUpdateStatus={handleUpdateStatus}
+            onUpdateLead={handleUpdateLead}
             onDelete={(id) => {
               if (window.confirm('Are you sure you want to delete this lead?')) {
                 handleDeleteLead(id);

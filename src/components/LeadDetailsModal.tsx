@@ -14,11 +14,12 @@ interface LeadDetailsModalProps {
   onClose: () => void;
   onUpdateStatus: (id: string, status: LeadStatus) => void;
   onDelete: (id: string) => void;
+  onUpdateLead?: (id: string, data: Partial<Lead>) => void;
   businessType: string;
   offer: string;
 }
 
-export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDelete, businessType, offer }: LeadDetailsModalProps) {
+export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDelete, onUpdateLead, businessType, offer }: LeadDetailsModalProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
@@ -28,9 +29,31 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
   const [notes, setNotes] = useState(lead.notes || '');
   const [savingNotes, setSavingNotes] = useState(false);
 
+  const [editPhone, setEditPhone] = useState(lead.phoneNumber || '');
+  const [editWebsite, setEditWebsite] = useState(lead.website || '');
+  const [editCategory, setEditCategory] = useState(lead.category || '');
+  const [savingInfo, setSavingInfo] = useState(false);
+
   useEffect(() => {
     setNotes(lead.notes || '');
-  }, [lead.notes]);
+    setEditPhone(lead.phoneNumber || '');
+    setEditWebsite(lead.website || '');
+    setEditCategory(lead.category || '');
+  }, [lead]);
+
+  const handleSaveInfo = async () => {
+    if (!onUpdateLead) return;
+    setSavingInfo(true);
+    try {
+      await onUpdateLead(lead.id, {
+        phoneNumber: editPhone,
+        website: editWebsite,
+        category: editCategory
+      });
+    } finally {
+      setSavingInfo(false);
+    }
+  };
 
   const handleSaveNotes = async () => {
     setSavingNotes(true);
@@ -285,55 +308,101 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
             </section>
 
             <section className="space-y-4">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <Phone className="w-5 h-5 text-blue-500" />
-                Contact Info
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Phone className="w-5 h-5 text-blue-500" />
+                  Contact Info
+                </h3>
+                {(editPhone !== (lead.phoneNumber || '') || 
+                  editWebsite !== (lead.website || '') || 
+                  editCategory !== (lead.category || '')) && (
+                  <button 
+                    onClick={handleSaveInfo}
+                    disabled={savingInfo}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-primary text-primary-foreground rounded-lg text-[10px] font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all"
+                  >
+                    {savingInfo ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                    Save Changes
+                  </button>
+                )}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-card border border-border p-4 rounded-2xl flex items-center justify-between group">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Phone className="w-5 h-5 text-muted-foreground shrink-0" />
-                    <span className="text-sm font-medium truncate">{lead.phoneNumber || 'No phone found'}</span>
-                  </div>
-                  {lead.phoneNumber && (
+                <div className="bg-card border border-border p-4 rounded-2xl space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Phone Number</label>
                     <button 
-                      onClick={() => copyToClipboard(lead.phoneNumber!, 'Phone number')}
-                      className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary"
+                      onClick={() => copyToClipboard(editPhone, 'Phone number')}
+                      className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground"
                     >
-                      <Copy className="w-4 h-4" />
+                      <Copy className="w-3 h-3" />
                     </button>
-                  )}
-                </div>
-                <div className="bg-card border border-border p-4 rounded-2xl flex items-center justify-between group">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Globe className="w-5 h-5 text-muted-foreground shrink-0" />
-                    <span className="text-sm font-medium truncate">{lead.website || 'No website found'}</span>
                   </div>
-                  {lead.website && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <input 
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      placeholder="No phone found"
+                      className="w-full bg-transparent text-sm font-medium outline-none focus:text-primary transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-card border border-border p-4 rounded-2xl space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Website</label>
                     <div className="flex items-center gap-1">
-                      <a href={lead.website} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary">
-                        <Globe className="w-4 h-4" />
-                      </a>
+                      {editWebsite && (
+                        <a href={editWebsite} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground">
+                          <Globe className="w-3 h-3" />
+                        </a>
+                      )}
                       <button 
-                        onClick={() => copyToClipboard(lead.website!, 'Website URL')}
-                        className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary"
+                        onClick={() => copyToClipboard(editWebsite, 'Website URL')}
+                        className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground"
                       >
-                        <Copy className="w-4 h-4" />
+                        <Copy className="w-3 h-3" />
                       </button>
                     </div>
-                  )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <input 
+                      value={editWebsite}
+                      onChange={(e) => setEditWebsite(e.target.value)}
+                      placeholder="No website found"
+                      className="w-full bg-transparent text-sm font-medium outline-none focus:text-primary transition-colors"
+                    />
+                  </div>
                 </div>
-                <div className="bg-card border border-border p-4 rounded-2xl flex items-center justify-between group sm:col-span-2">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <MapPin className="w-5 h-5 text-muted-foreground shrink-0" />
+
+                <div className="bg-card border border-border p-4 rounded-2xl space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Category</label>
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <input 
+                      value={editCategory}
+                      onChange={(e) => setEditCategory(e.target.value)}
+                      placeholder="No category"
+                      className="w-full bg-transparent text-sm font-medium outline-none focus:text-primary transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-card border border-border p-4 rounded-2xl space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Address</label>
+                    <button 
+                      onClick={() => copyToClipboard(lead.address, 'Address')}
+                      className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
                     <span className="text-sm font-medium truncate">{lead.address}</span>
                   </div>
-                  <button 
-                    onClick={() => copyToClipboard(lead.address, 'Address')}
-                    className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
             </section>
