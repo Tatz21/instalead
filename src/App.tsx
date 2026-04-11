@@ -794,6 +794,13 @@ function LeadsScreen({
                 
                 <div className="flex items-center gap-2">
                   <button 
+                    onClick={(e) => { e.stopPropagation(); onUpdateStatus(lead.id, 'converted'); }}
+                    className="p-2 bg-green-500/10 text-green-500 rounded-lg hover:bg-green-500/20 transition-colors"
+                    title="Mark as Converted"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                  </button>
+                  <button 
                     onClick={(e) => { e.stopPropagation(); onSelectLead(lead); }}
                     className="p-2 bg-accent rounded-lg text-muted-foreground"
                   >
@@ -916,6 +923,15 @@ function LeadsScreen({
                       </td>
                       <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
+                          {lead.status !== 'converted' && (
+                            <button 
+                              onClick={() => onUpdateStatus(lead.id, 'converted')}
+                              className="p-2 bg-green-500/10 text-green-500 rounded-lg hover:bg-green-500/20 transition-colors"
+                              title="Mark as Converted"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                            </button>
+                          )}
                           <button 
                             onClick={() => onSelectLead(lead)}
                             className="p-2 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary"

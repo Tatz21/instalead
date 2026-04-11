@@ -436,7 +436,18 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
           {/* Right Column: Tasks & Status */}
           <div className="space-y-8">
             <section className="space-y-4">
-              <h3 className="text-lg font-bold">Status</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold">Status</h3>
+                {lead.status !== 'converted' && (
+                  <button
+                    onClick={() => onUpdateStatus(lead.id, 'converted')}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-green-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Mark as Converted
+                  </button>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 {['new', 'contacted', 'replied', 'converted', 'lost'].map((s) => (
                   <button
