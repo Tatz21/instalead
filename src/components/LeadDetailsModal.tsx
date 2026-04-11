@@ -33,16 +33,29 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
   const [editWebsite, setEditWebsite] = useState(lead.website || '');
   const [editCategory, setEditCategory] = useState(lead.category || '');
   const [savingInfo, setSavingInfo] = useState(false);
+  const [websiteError, setWebsiteError] = useState(false);
+
+  const validateUrl = (url: string) => {
+    if (!url) return true;
+    const pattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+    return pattern.test(url);
+  };
 
   useEffect(() => {
     setNotes(lead.notes || '');
     setEditPhone(lead.phoneNumber || '');
     setEditWebsite(lead.website || '');
     setEditCategory(lead.category || '');
+    setWebsiteError(false);
   }, [lead]);
 
   const handleSaveInfo = async () => {
     if (!onUpdateLead) return;
+    if (!validateUrl(editWebsite)) {
+      setWebsiteError(true);
+      toast.error('Please enter a valid website URL');
+      return;
+    }
     setSavingInfo(true);
     try {
       await onUpdateLead(lead.id, {
@@ -348,12 +361,18 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
                   </div>
                 </div>
 
-                <div className="bg-card border border-border p-4 rounded-2xl space-y-1.5">
+                <div className={cn(
+                  "bg-card border p-4 rounded-2xl space-y-1.5 transition-all",
+                  websiteError ? "border-destructive ring-1 ring-destructive" : "border-border"
+                )}>
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Website</label>
+                    <label className={cn(
+                      "text-[10px] font-bold uppercase",
+                      websiteError ? "text-destructive" : "text-muted-foreground"
+                    )}>Website</label>
                     <div className="flex items-center gap-1">
-                      {editWebsite && (
-                        <a href={editWebsite} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground">
+                      {editWebsite && !websiteError && (
+                        <a href={editWebsite.startsWith('http') ? editWebsite : `https://${editWebsite}`} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground">
                           <Globe className="w-3 h-3" />
                         </a>
                       )}
@@ -366,14 +385,20 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <Globe className={cn("w-4 h-4 shrink-0", websiteError ? "text-destructive" : "text-muted-foreground")} />
                     <input 
                       value={editWebsite}
-                      onChange={(e) => setEditWebsite(e.target.value)}
+                      onChange={(e) => {
+                        setEditWebsite(e.target.value);
+                        if (websiteError) setWebsiteError(false);
+                      }}
                       placeholder="No website found"
                       className="w-full bg-transparent text-sm font-medium outline-none focus:text-primary transition-colors"
                     />
                   </div>
+                  {websiteError && (
+                    <p className="text-[9px] text-destructive font-bold">Invalid URL format</p>
+                  )}
                 </div>
 
                 <div className="bg-card border border-border p-4 rounded-2xl space-y-1.5">
