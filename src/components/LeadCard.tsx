@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, MapPin, Phone, Globe, Star, MoreVertical, ExternalLink, Copy, MessageSquare } from 'lucide-react';
+import { User, MapPin, Phone, Globe, Star, MoreVertical, ExternalLink, Copy, MessageSquare, HelpCircle } from 'lucide-react';
 import { Lead } from '../types';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
@@ -58,13 +58,29 @@ export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProp
         </div>
         <div className="flex items-center gap-2">
           {lead.aiScore !== undefined && (
-            <div className={cn(
-              "w-10 h-10 rounded-xl flex flex-col items-center justify-center text-[10px] font-bold border",
-              lead.aiScore > 70 ? "bg-green-500/10 text-green-500 border-green-500/20" : 
-              lead.aiScore > 40 ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"
-            )}>
-              <span className="text-[8px] opacity-70">SCORE</span>
-              {lead.aiScore}
+            <div className="relative group/score">
+              <div className={cn(
+                "w-10 h-10 rounded-xl flex flex-col items-center justify-center text-[10px] font-bold border cursor-help",
+                lead.aiScore > 70 ? "bg-green-500/10 text-green-500 border-green-500/20" : 
+                lead.aiScore > 40 ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"
+              )}>
+                <span className="text-[8px] opacity-70">SCORE</span>
+                {lead.aiScore}
+              </div>
+              
+              {/* Tooltip */}
+              <div className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-popover border border-border rounded-lg shadow-xl text-[10px] leading-tight text-popover-foreground opacity-0 invisible group-hover/score:opacity-100 group-hover/score:visible transition-all z-50">
+                <div className="flex items-center gap-1 mb-1 text-primary">
+                  <HelpCircle className="w-3 h-3" />
+                  <p className="font-bold">AI Scoring System</p>
+                </div>
+                <p className="mb-1">Calculated based on:</p>
+                <ul className="space-y-1 list-disc list-inside opacity-80">
+                  <li>Business relevance</li>
+                  <li>Market presence</li>
+                  <li>Growth potential</li>
+                </ul>
+              </div>
             </div>
           )}
           <button className="p-2 hover:bg-accent rounded-full transition-colors">

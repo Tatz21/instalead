@@ -538,6 +538,7 @@ function LeadsScreen({
           updatedAt: new Date().toISOString()
         });
       }
+      toast.success(`Added tag "${tagInput}" to ${selectedLeads.length} leads`);
       setTagInput('');
       setShowTagInput(false);
       setSelectedIds(new Set());
@@ -547,7 +548,7 @@ function LeadsScreen({
   };
   const handleBulkScore = async () => {
     if (!businessType || !offer) {
-      alert('Please set your business type and offer in the AI Writer or Settings first.');
+      toast.error('Please set your business type and offer in Settings first');
       return;
     }
     setScoringBulk(true);
@@ -568,6 +569,7 @@ function LeadsScreen({
           updatedAt: new Date().toISOString()
         });
       }
+      toast.success(`Successfully scored ${selectedLeads.length} leads`);
       setSelectedIds(new Set());
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'leads');
