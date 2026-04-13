@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, MapPin, Phone, Globe, Star, Tag, Calendar, MessageSquare, Trash2, CheckCircle2, Clock, Plus, BarChart3, RefreshCw, Save, Zap, Copy, ArrowRight, HelpCircle } from 'lucide-react';
-import { Lead, LeadStatus, Task } from '../types';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import { Lead, LeadStatus, Task, CustomFieldDefinition } from '../types';
 import { cn, formatNumber } from '../lib/utils';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -17,9 +19,19 @@ interface LeadDetailsModalProps {
   onUpdateLead?: (id: string, data: Partial<Lead>) => void;
   businessType: string;
   offer: string;
+  customFieldDefinitions?: CustomFieldDefinition[];
 }
 
-export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDelete, onUpdateLead, businessType, offer }: LeadDetailsModalProps) {
+export default function LeadDetailsModal({ 
+  lead, 
+  onClose, 
+  onUpdateStatus, 
+  onDelete, 
+  onUpdateLead, 
+  businessType, 
+  offer,
+  customFieldDefinitions = []
+}: LeadDetailsModalProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
@@ -32,6 +44,7 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
   const [editPhone, setEditPhone] = useState(lead.phoneNumber || '');
   const [editWebsite, setEditWebsite] = useState(lead.website || '');
   const [editCategory, setEditCategory] = useState(lead.category || '');
+  const [customFields, setCustomFields] = useState<Record<string, any>>(lead.customFields || {});
   const [savingInfo, setSavingInfo] = useState(false);
   const [websiteError, setWebsiteError] = useState(false);
 
@@ -46,6 +59,7 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
     setEditPhone(lead.phoneNumber || '');
     setEditWebsite(lead.website || '');
     setEditCategory(lead.category || '');
+    setCustomFields(lead.customFields || {});
     setWebsiteError(false);
   }, [lead]);
 
@@ -61,7 +75,8 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
       await onUpdateLead(lead.id, {
         phoneNumber: editPhone,
         website: editWebsite,
-        category: editCategory
+        category: editCategory,
+        customFields
       });
     } finally {
       setSavingInfo(false);
@@ -70,9 +85,11 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
 
   const handleSaveNotes = async () => {
     setSavingNotes(true);
+    // Normalize empty content from Quill
+    const normalizedNotes = notes === '<p><br></p>' ? '' : notes;
     try {
       await updateDoc(doc(db, 'leads', lead.id), {
-        notes,
+        notes: normalizedNotes,
         updatedAt: new Date().toISOString()
       });
       toast.success('Notes saved');
@@ -301,17 +318,24 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
                 <MessageSquare className="w-5 h-5 text-green-500" />
                 Notes
               </h3>
-              <div className="space-y-3">
-                <textarea 
+              <div className="space-y-3 quill-container">
+                <ReactQuill 
+                  theme="snow"
                   value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  placeholder="Add private notes about this lead..." 
-                  rows={4}
-                  className="w-full bg-accent/30 border border-border rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
+                  onChange={setNotes}
+                  placeholder="Add private notes about this lead..."
+                  modules={{
+                    toolbar: [
+                      ['bold', 'italic', 'underline'],
+                      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                      ['clean']
+                    ],
+                  }}
+                  className="bg-accent/10 rounded-2xl overflow-hidden border border-border"
                 />
                 <button 
                   onClick={handleSaveNotes}
-                  disabled={savingNotes || notes === (lead.notes || '')}
+                  disabled={savingNotes || (notes === (lead.notes || '') || (notes === '<p><br></p>' && !lead.notes))}
                   className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-bold disabled:opacity-50 transition-all hover:scale-105 active:scale-95"
                 >
                   {savingNotes ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -429,6 +453,22 @@ export default function LeadDetailsModal({ lead, onClose, onUpdateStatus, onDele
                     <span className="text-sm font-medium truncate">{lead.address}</span>
                   </div>
                 </div>
+
+                {customFieldDefinitions.map(field => (
+                  <div key={field.id} className="bg-card border border-border p-4 rounded-2xl space-y-1.5">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase">{field.label}</label>
+                    <div className="flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <input 
+                        type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                        value={customFields[field.id] || ''}
+                        onChange={(e) => setCustomFields(prev => ({ ...prev, [field.id]: e.target.value }))}
+                        placeholder={`Enter ${field.label.toLowerCase()}`}
+                        className="w-full bg-transparent text-sm font-medium outline-none focus:text-primary transition-colors"
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </section>
           </div>

@@ -13,7 +13,7 @@ import {
   ArrowRight, CheckCircle2, MessageSquare, TrendingUp,
   Instagram, Copy, RefreshCw, Trash2, Save, MessageCircle, Send,
   ChevronRight, MoreHorizontal, CheckSquare, Square, Clock, Zap, X, Tag,
-  MapPin, LayoutGrid, List, Globe, Phone, Star
+  MapPin, LayoutGrid, List, Globe, Phone, Star, Download, Settings2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
@@ -393,7 +393,8 @@ function LeadsScreen({
   onSelectLead,
   businessType,
   offer,
-  user
+  user,
+  profile
 }: { 
   leads: Lead[], 
   onUpdateStatus: (id: string, status: LeadStatus) => void, 
@@ -401,7 +402,8 @@ function LeadsScreen({
   onSelectLead: (lead: Lead) => void,
   businessType: string,
   offer: string,
-  user: FirebaseUser
+  user: FirebaseUser,
+  profile: UserProfile | null
 }) {
   const [filter, setFilter] = useState<LeadStatus | 'all'>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -413,6 +415,10 @@ function LeadsScreen({
   const [scoringBulk, setScoringBulk] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [showTagInput, setShowTagInput] = useState(false);
+  const [showFieldManager, setShowFieldManager] = useState(false);
+  const [newFieldName, setNewFieldName] = useState('');
+  const [newFieldType, setNewFieldType] = useState<'text' | 'number' | 'date'>('text');
+  const [addingField, setAddingField] = useState(false);
 
   const handleImportLeads = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -496,6 +502,89 @@ function LeadsScreen({
       if (sortBy === 'followers') return (b.userRatingsTotal || 0) - (a.userRatingsTotal || 0);
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
+
+  const handleExportCSV = () => {
+    if (filteredLeads.length === 0) {
+      toast.error('No leads to export');
+      return;
+    }
+
+    const csvData = filteredLeads.map(l => {
+      const baseData: any = {
+        Name: l.name,
+        Address: l.address,
+        Phone: l.phoneNumber || '',
+        Website: l.website || '',
+        Status: l.status.toUpperCase(),
+        Score: l.aiScore || '',
+        Reasoning: l.aiReasoning || '',
+        Tags: l.tags.join(', '),
+        Rating: l.rating || '',
+        Reviews: l.userRatingsTotal || '',
+        CreatedAt: l.createdAt
+      };
+
+      // Add custom fields
+      if (profile?.customFieldDefinitions) {
+        profile.customFieldDefinitions.forEach(def => {
+          baseData[def.label] = l.customFields?.[def.id] || '';
+        });
+      }
+
+      return baseData;
+    });
+
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `leads_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Exported ${filteredLeads.length} leads to CSV`);
+  };
+
+  const handleAddField = async () => {
+    if (!newFieldName || !user) return;
+    setAddingField(true);
+    try {
+      const newField = {
+        id: Math.random().toString(36).substr(2, 9),
+        label: newFieldName,
+        type: newFieldType
+      };
+      
+      const currentFields = profile?.customFieldDefinitions || [];
+      await updateDoc(doc(db, 'profiles', user.uid), {
+        customFieldDefinitions: [...currentFields, newField],
+        updatedAt: new Date().toISOString()
+      });
+      
+      setNewFieldName('');
+      toast.success(`Custom field "${newFieldName}" added`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `profiles/${user.uid}`);
+    } finally {
+      setAddingField(false);
+    }
+  };
+
+  const handleDeleteField = async (fieldId: string) => {
+    if (!user || !profile) return;
+    try {
+      const updatedFields = profile.customFieldDefinitions?.filter(f => f.id !== fieldId) || [];
+      await updateDoc(doc(db, 'profiles', user.uid), {
+        customFieldDefinitions: updatedFields,
+        updatedAt: new Date().toISOString()
+      });
+      toast.success('Custom field removed');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `profiles/${user.uid}`);
+    }
+  };
 
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredLeads.length) {
@@ -586,6 +675,23 @@ function LeadsScreen({
           <p className="text-muted-foreground">Manage and track your outreach progress.</p>
         </div>
         <div className="flex items-center gap-3">
+          <button 
+            onClick={handleExportCSV}
+            className="px-4 py-2 bg-accent text-accent-foreground rounded-xl text-xs font-bold hover:bg-accent/80 transition-all flex items-center gap-2"
+          >
+            <Download className="w-3 h-3" />
+            Export CSV
+          </button>
+          <button 
+            onClick={() => setShowFieldManager(!showFieldManager)}
+            className={cn(
+              "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2",
+              showFieldManager ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground hover:bg-accent/80"
+            )}
+          >
+            <Settings2 className="w-3 h-3" />
+            Custom Fields
+          </button>
           <div className="flex items-center bg-card border border-border rounded-xl p-1 mr-2">
             <button 
               onClick={() => setViewMode('table')}
@@ -627,6 +733,83 @@ function LeadsScreen({
           </div>
         </div>
       </header>
+
+      <AnimatePresence>
+        {showFieldManager && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-6 mb-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold">Manage Custom Fields</h3>
+                  <p className="text-xs text-muted-foreground">Define extra data points for your leads.</p>
+                </div>
+                <button onClick={() => setShowFieldManager(false)} className="p-2 hover:bg-accent rounded-xl">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-accent/20 rounded-2xl border border-border">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-muted-foreground">Field Label</label>
+                  <input 
+                    value={newFieldName}
+                    onChange={e => setNewFieldName(e.target.value)}
+                    placeholder="e.g. LinkedIn URL, Annual Revenue"
+                    className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-muted-foreground">Field Type</label>
+                  <select 
+                    value={newFieldType}
+                    onChange={e => setNewFieldType(e.target.value as any)}
+                    className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="text">Text</option>
+                    <option value="number">Number</option>
+                    <option value="date">Date</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <button 
+                    onClick={handleAddField}
+                    disabled={addingField || !newFieldName}
+                    className="w-full py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
+                    {addingField ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                    Add Field
+                  </button>
+                </div>
+              </div>
+
+              {profile?.customFieldDefinitions && profile.customFieldDefinitions.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-muted-foreground">Active Custom Fields</label>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.customFieldDefinitions.map(field => (
+                      <div key={field.id} className="flex items-center gap-2 bg-accent/50 border border-border rounded-xl px-3 py-1.5 group">
+                        <span className="text-xs font-bold">{field.label}</span>
+                        <span className="text-[10px] opacity-50 uppercase">{field.type}</span>
+                        <button 
+                          onClick={() => handleDeleteField(field.id)}
+                          className="p-1 hover:text-destructive transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
@@ -675,9 +858,9 @@ function LeadsScreen({
                 />
                 <button 
                   onClick={handleBulkTag}
-                  className="p-2 bg-primary text-primary-foreground rounded-xl"
+                  className="px-3 py-2 bg-primary text-primary-foreground rounded-xl text-[10px] font-bold hover:scale-[1.02] active:scale-[0.98] transition-all"
                 >
-                  <Plus className="w-4 h-4" />
+                  Apply
                 </button>
                 <button 
                   onClick={() => setShowTagInput(false)}
@@ -1218,7 +1401,7 @@ function ChatScreen() {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-2.0-flash-exp",
         contents: [...messages, { role: 'user', text: userMessage }].map(m => ({
           role: m.role,
           parts: [{ text: m.text }]
@@ -1746,6 +1929,7 @@ export default function App() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
+      toast.success(`Lead "${leadData.name}" saved successfully`);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'leads');
     }
@@ -1845,6 +2029,7 @@ export default function App() {
               businessType={businessProfile.businessType}
               offer={businessProfile.offer}
               user={user}
+              profile={profile}
             />
           } />
           <Route path="/finder" element={<FinderScreen onSaveLead={handleSaveLead} savedNames={savedNames} />} />
@@ -1871,6 +2056,7 @@ export default function App() {
             }}
             businessType={businessProfile.businessType}
             offer={businessProfile.offer}
+            customFieldDefinitions={profile?.customFieldDefinitions}
           />
         )}
       </AnimatePresence>

@@ -15,6 +15,7 @@ export interface Lead {
   tags: string[];
   aiScore?: number;
   aiReasoning?: string;
+  customFields?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
 }
@@ -31,6 +32,12 @@ export interface Task {
   createdAt: string;
 }
 
+export interface CustomFieldDefinition {
+  id: string;
+  label: string;
+  type: 'text' | 'number' | 'date';
+}
+
 export interface UserProfile {
   uid: string;
   email: string;
@@ -40,6 +47,7 @@ export interface UserProfile {
   createdAt: string;
   updatedAt: string;
   onboardingCompleted?: boolean;
+  customFieldDefinitions?: CustomFieldDefinition[];
   settings: {
     theme: 'light' | 'dark';
     apiKeys: Record<string, string>;

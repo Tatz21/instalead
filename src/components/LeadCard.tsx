@@ -18,6 +18,12 @@ export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProp
     toast.success(`${label} copied to clipboard`);
   };
 
+  const stripHtml = (html: string) => {
+    const tmp = document.createElement("DIV");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
   return (
     <div 
       className="glass-dark rounded-2xl p-5 hover:border-primary/50 transition-all duration-300 group cursor-pointer"
@@ -69,17 +75,24 @@ export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProp
               </div>
               
               {/* Tooltip */}
-              <div className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-popover border border-border rounded-lg shadow-xl text-[10px] leading-tight text-popover-foreground opacity-0 invisible group-hover/score:opacity-100 group-hover/score:visible transition-all z-50">
-                <div className="flex items-center gap-1 mb-1 text-primary">
-                  <HelpCircle className="w-3 h-3" />
-                  <p className="font-bold">AI Scoring System</p>
+              <div className="absolute bottom-full right-0 mb-2 w-56 p-3 bg-popover border border-border rounded-xl shadow-2xl text-[10px] leading-relaxed text-popover-foreground opacity-0 invisible group-hover/score:opacity-100 group-hover/score:visible transition-all z-50">
+                <div className="flex items-center gap-1.5 mb-2 text-primary">
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  <p className="font-bold text-xs">AI Scoring System</p>
                 </div>
-                <p className="mb-1">Calculated based on:</p>
-                <ul className="space-y-1 list-disc list-inside opacity-80">
-                  <li>Business relevance</li>
-                  <li>Market presence</li>
-                  <li>Growth potential</li>
-                </ul>
+                <div className="space-y-2 opacity-90">
+                  <div>
+                    <p className="font-bold text-primary/80 mb-0.5 uppercase tracking-tighter">Relevance</p>
+                    <p>How well the business matches your specific industry and offer.</p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-primary/80 mb-0.5 uppercase tracking-tighter">Growth Potential</p>
+                    <p>Analysis of review trends, rating quality, and market presence.</p>
+                  </div>
+                  <div className="pt-1 border-t border-border/50">
+                    <p className="italic text-[9px]">Higher scores indicate a better fit for your current outreach campaign.</p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -129,7 +142,7 @@ export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProp
             NOTES
           </div>
           <p className="text-[10px] text-muted-foreground line-clamp-2 italic">
-            "{lead.notes}"
+            "{stripHtml(lead.notes)}"
           </p>
         </div>
       )}
