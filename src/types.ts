@@ -6,6 +6,7 @@ export interface Lead {
   name: string;
   address: string;
   phoneNumber?: string;
+  email?: string;
   website?: string;
   rating?: number;
   userRatingsTotal?: number;

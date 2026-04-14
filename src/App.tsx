@@ -13,7 +13,7 @@ import {
   ArrowRight, CheckCircle2, MessageSquare, TrendingUp,
   Instagram, Copy, RefreshCw, Trash2, Save, MessageCircle, Send,
   ChevronRight, MoreHorizontal, CheckSquare, Square, Clock, Zap, X, Tag,
-  MapPin, LayoutGrid, List, Globe, Phone, Star, Download, Settings2
+  MapPin, LayoutGrid, List, Globe, Phone, Star, Download, Settings2, HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
@@ -22,7 +22,7 @@ import Papa from 'papaparse';
 
 import { auth, db, googleProvider } from './lib/firebase';
 import { cn, formatNumber } from './lib/utils';
-import { Lead, LeadStatus, OutreachMessage, UserProfile, Task, AutomationRule } from './types';
+import { Lead, LeadStatus, OutreachMessage, UserProfile, Task, AutomationRule, CustomFieldDefinition } from './types';
 import { googleMapsService } from './services/googleMapsService';
 import { generateOutreachMessage, scoreLead } from './services/aiService';
 import { handleFirestoreError, OperationType } from './lib/firestore-errors';
@@ -114,7 +114,7 @@ function AuthScreen() {
 }
 
 // --- Dashboard Screen ---
-function DashboardScreen({ leads, tasks, onSelectLead }: { leads: Lead[], tasks: Task[], onSelectLead: (lead: Lead) => void }) {
+function DashboardScreen({ leads, tasks, onSelectLead, businessType, offer, customFieldDefinitions }: { leads: Lead[], tasks: Task[], onSelectLead: (lead: Lead) => void, businessType: string, offer: string, customFieldDefinitions?: CustomFieldDefinition[] }) {
   const stats = [
     { label: 'Total Leads', value: leads.length, icon: Users, trend: '+12%', trendUp: true },
     { label: 'Messages Sent', value: leads.filter(l => l.status !== 'new').length, icon: MessageSquare, trend: '+5%', trendUp: true },
@@ -150,7 +150,7 @@ function DashboardScreen({ leads, tasks, onSelectLead }: { leads: Lead[], tasks:
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {leads.slice(0, 4).map((lead) => (
-              <LeadCard key={lead.id} lead={lead} onView={() => onSelectLead(lead)} />
+              <LeadCard key={lead.id} lead={lead} onView={() => onSelectLead(lead)} businessType={businessType} offer={offer} customFieldDefinitions={customFieldDefinitions} />
             ))}
             {leads.length === 0 && (
               <div className="col-span-full py-12 text-center bg-card rounded-3xl border border-dashed border-border">
@@ -211,7 +211,7 @@ function DashboardScreen({ leads, tasks, onSelectLead }: { leads: Lead[], tasks:
 }
 
 // --- Finder Screen ---
-function FinderScreen({ onSaveLead, savedNames }: { onSaveLead: (lead: Partial<Lead>) => void, savedNames: Set<string> }) {
+function FinderScreen({ onSaveLead, savedNames, businessType, offer }: { onSaveLead: (lead: Partial<Lead>) => void, savedNames: Set<string>, businessType: string, offer: string }) {
   const [keyword, setKeyword] = useState('');
   const [location, setLocation] = useState('');
   const [loading, setLoading] = useState(false);
@@ -356,6 +356,8 @@ function FinderScreen({ onSaveLead, savedNames }: { onSaveLead: (lead: Partial<L
                 lead={lead} 
                 onSave={() => onSaveLead(lead)} 
                 isSaved={savedNames.has(lead.name!)}
+                businessType={businessType}
+                offer={offer}
               />
             </motion.div>
           ))}
@@ -419,6 +421,10 @@ function LeadsScreen({
   const [newFieldName, setNewFieldName] = useState('');
   const [newFieldType, setNewFieldType] = useState<'text' | 'number' | 'date'>('text');
   const [addingField, setAddingField] = useState(false);
+  const [filterTag, setFilterTag] = useState<string>('all');
+  const [filterScoreMin, setFilterScoreMin] = useState<number>(0);
+  const [filterScoreMax, setFilterScoreMax] = useState<number>(100);
+  const [showFilters, setShowFilters] = useState(false);
 
   const handleImportLeads = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -435,6 +441,15 @@ function LeadsScreen({
           for (const leadData of newLeads) {
             if (!leadData.name) continue;
             
+            const customFields: Record<string, any> = {};
+            if (profile?.customFieldDefinitions) {
+              profile.customFieldDefinitions.forEach(def => {
+                if (leadData[def.label]) {
+                  customFields[def.id] = leadData[def.label];
+                }
+              });
+            }
+
             await addDoc(collection(db, 'leads'), {
               ownerId: user.uid,
               name: leadData.name,
@@ -446,6 +461,7 @@ function LeadsScreen({
               category: leadData.category || '',
               status: 'new',
               tags: leadData.tags ? leadData.tags.split(',').map((t: string) => t.trim()) : [],
+              customFields,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             });
@@ -490,6 +506,11 @@ function LeadsScreen({
 
   const filteredLeads = leads
     .filter(l => filter === 'all' ? true : l.status === filter)
+    .filter(l => filterTag === 'all' ? true : l.tags?.includes(filterTag))
+    .filter(l => {
+      const score = l.aiScore || 0;
+      return score >= filterScoreMin && score <= filterScoreMax;
+    })
     .filter(l => {
       const query = searchQuery.toLowerCase();
       return l.name.toLowerCase().includes(query) || 
@@ -667,6 +688,8 @@ function LeadsScreen({
     }
   };
 
+  const allTags = Array.from(new Set(leads.flatMap(l => l.tags || []))).sort();
+
   return (
     <div className="space-y-8" data-tour="leads">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -822,6 +845,33 @@ function LeadsScreen({
           />
         </div>
         <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(
+              "px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border",
+              showFilters ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/50"
+            )}
+          >
+            <Filter className="w-4 h-4" />
+            Filters
+            {(filterTag !== 'all' || filterScoreMin > 0 || filterScoreMax < 100 || filter !== 'all') && (
+              <span className="w-2 h-2 bg-red-500 rounded-full" />
+            )}
+          </button>
+          {(filterTag !== 'all' || filterScoreMin > 0 || filterScoreMax < 100 || filter !== 'all') && (
+            <button 
+              onClick={() => {
+                setFilter('all');
+                setFilterTag('all');
+                setFilterScoreMin(0);
+                setFilterScoreMax(100);
+              }}
+              className="p-2.5 bg-destructive/10 text-destructive rounded-xl hover:bg-destructive/20 transition-all"
+              title="Clear all filters"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
           <span className="text-xs font-bold text-muted-foreground whitespace-nowrap">Sort by:</span>
           <select 
             value={sortBy}
@@ -834,6 +884,80 @@ function LeadsScreen({
           </select>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-card border border-border rounded-3xl p-6 shadow-xl grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase text-muted-foreground">Status</label>
+                <select 
+                  value={filter}
+                  onChange={e => setFilter(e.target.value as any)}
+                  className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="new">New</option>
+                  <option value="contacted">Contacted</option>
+                  <option value="replied">Replied</option>
+                  <option value="converted">Converted</option>
+                  <option value="lost">Lost</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase text-muted-foreground">Filter by Tag</label>
+                <select 
+                  value={filterTag}
+                  onChange={e => setFilterTag(e.target.value)}
+                  className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="all">All Tags</option>
+                  {allTags.map(tag => (
+                    <option key={tag} value={tag}>{tag}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-[10px] font-bold uppercase text-muted-foreground">AI Score Range ({filterScoreMin} - {filterScoreMax})</label>
+                <div className="flex items-center gap-4">
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    value={filterScoreMin}
+                    onChange={e => setFilterScoreMin(parseInt(e.target.value))}
+                    className="flex-1 accent-primary"
+                  />
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    value={filterScoreMax}
+                    onChange={e => setFilterScoreMax(parseInt(e.target.value))}
+                    className="flex-1 accent-primary"
+                  />
+                  <button 
+                    onClick={() => {
+                      setFilter('all');
+                      setFilterTag('all');
+                      setFilterScoreMin(0);
+                      setFilterScoreMax(100);
+                    }}
+                    className="text-[10px] font-bold text-primary hover:underline"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {selectedIds.size > 0 && (
         <motion.div 
@@ -946,12 +1070,32 @@ function LeadsScreen({
                   </div>
                 </div>
                 {lead.aiScore !== undefined && (
-                  <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold",
-                    lead.aiScore > 70 ? "bg-green-500/10 text-green-500" : 
-                    lead.aiScore > 40 ? "bg-yellow-500/10 text-yellow-500" : "bg-red-500/10 text-red-500"
-                  )}>
-                    {lead.aiScore}
+                  <div className="relative group/score">
+                    <div className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold cursor-help",
+                      lead.aiScore > 70 ? "bg-green-500/10 text-green-500" : 
+                      lead.aiScore > 40 ? "bg-yellow-500/10 text-yellow-500" : "bg-red-500/10 text-red-500"
+                    )}>
+                      {lead.aiScore}
+                    </div>
+                    
+                    {/* Tooltip */}
+                    <div className="absolute bottom-full right-0 mb-2 w-56 p-3 bg-popover border border-border rounded-xl shadow-2xl text-[10px] leading-relaxed text-popover-foreground opacity-0 invisible group-hover/score:opacity-100 group-hover/score:visible transition-all z-50">
+                      <div className="flex items-center gap-1.5 mb-2 text-primary">
+                        <HelpCircle className="w-3.5 h-3.5" />
+                        <p className="font-bold text-xs">AI Scoring System</p>
+                      </div>
+                      <div className="space-y-2 opacity-90">
+                        <div>
+                          <p className="font-bold text-primary/80 mb-0.5 uppercase tracking-tighter">Relevance</p>
+                          <p>Match with your business type and offer.</p>
+                        </div>
+                        <div>
+                          <p className="font-bold text-primary/80 mb-0.5 uppercase tracking-tighter">Growth Potential</p>
+                          <p>Market presence and review trends.</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1092,12 +1236,32 @@ function LeadsScreen({
                       </td>
                       <td className="p-4">
                         {lead.aiScore !== undefined ? (
-                          <div className={cn(
-                            "inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-bold",
-                            lead.aiScore > 70 ? "bg-green-500/10 text-green-500" : 
-                            lead.aiScore > 40 ? "bg-yellow-500/10 text-yellow-500" : "bg-red-500/10 text-red-500"
-                          )}>
-                            {lead.aiScore}
+                          <div className="relative group/score inline-block">
+                            <div className={cn(
+                              "inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-bold cursor-help",
+                              lead.aiScore > 70 ? "bg-green-500/10 text-green-500" : 
+                              lead.aiScore > 40 ? "bg-yellow-500/10 text-yellow-500" : "bg-red-500/10 text-red-500"
+                            )}>
+                              {lead.aiScore}
+                            </div>
+                            
+                            {/* Tooltip */}
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-popover border border-border rounded-xl shadow-2xl text-[10px] leading-relaxed text-popover-foreground opacity-0 invisible group-hover/score:opacity-100 group-hover/score:visible transition-all z-50">
+                              <div className="flex items-center gap-1.5 mb-2 text-primary">
+                                <HelpCircle className="w-3.5 h-3.5" />
+                                <p className="font-bold text-xs">AI Scoring System</p>
+                              </div>
+                              <div className="space-y-2 opacity-90">
+                                <div>
+                                  <p className="font-bold text-primary/80 mb-0.5 uppercase tracking-tighter">Relevance</p>
+                                  <p>How well the business matches your specific industry and offer.</p>
+                                </div>
+                                <div>
+                                  <p className="font-bold text-primary/80 mb-0.5 uppercase tracking-tighter">Growth Potential</p>
+                                  <p>Analysis of review trends, rating quality, and market presence.</p>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground italic">N/A</span>
@@ -1164,6 +1328,9 @@ function LeadsScreen({
                   <LeadCard 
                     lead={lead} 
                     onView={() => onSelectLead(lead)}
+                    businessType={businessType}
+                    offer={offer}
+                    customFieldDefinitions={profile?.customFieldDefinitions}
                   />
                   <div className="absolute bottom-4 right-4 flex items-center gap-2">
                     <select 
@@ -2019,7 +2186,7 @@ export default function App() {
       )}
       <Routes>
         <Route element={<Layout theme={profile?.settings?.theme || 'dark'} onToggleTheme={toggleTheme} />}>
-          <Route path="/" element={<DashboardScreen leads={leads} tasks={tasks} onSelectLead={setSelectedLead} />} />
+          <Route path="/" element={<DashboardScreen leads={leads} tasks={tasks} onSelectLead={setSelectedLead} businessType={businessProfile.businessType} offer={businessProfile.offer} customFieldDefinitions={profile?.customFieldDefinitions} />} />
           <Route path="/leads" element={
             <LeadsScreen 
               leads={leads} 
@@ -2032,7 +2199,7 @@ export default function App() {
               profile={profile}
             />
           } />
-          <Route path="/finder" element={<FinderScreen onSaveLead={handleSaveLead} savedNames={savedNames} />} />
+          <Route path="/finder" element={<FinderScreen onSaveLead={handleSaveLead} savedNames={savedNames} businessType={businessProfile.businessType} offer={businessProfile.offer} />} />
           <Route path="/ai-writer" element={<AIWriterScreen user={user} businessProfile={businessProfile} />} />
           <Route path="/automation" element={<AutomationScreen user={user} rules={automationRules} />} />
           <Route path="/chat" element={<ChatScreen />} />

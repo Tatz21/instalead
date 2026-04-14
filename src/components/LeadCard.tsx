@@ -1,21 +1,48 @@
-import React from 'react';
-import { User, MapPin, Phone, Globe, Star, MoreVertical, ExternalLink, Copy, MessageSquare, HelpCircle } from 'lucide-react';
-import { Lead } from '../types';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { User, MapPin, Phone, Globe, Star, MoreVertical, ExternalLink, Copy, MessageSquare, HelpCircle, Mail, Zap, RefreshCw, ChevronDown, ChevronUp, Tag as TagIcon } from 'lucide-react';
+import { Lead, CustomFieldDefinition } from '../types';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
+import { generateOutreachMessage } from '../services/aiService';
 
 interface LeadCardProps {
   lead: Partial<Lead>;
   onSave?: () => void;
   onView?: () => void;
   isSaved?: boolean;
+  businessType?: string;
+  offer?: string;
+  customFieldDefinitions?: CustomFieldDefinition[];
 }
 
-export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProps) {
+export default function LeadCard({ lead, onSave, onView, isSaved, businessType, offer, customFieldDefinitions = [] }: LeadCardProps) {
+  const [quickMessage, setQuickMessage] = useState<{ cold_dm: string, follow_up: string } | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState(false);
+  const [showAllTags, setShowAllTags] = useState(false);
+
   const copyToClipboard = (e: React.MouseEvent, text: string, label: string) => {
     e.stopPropagation();
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied to clipboard`);
+  };
+
+  const handleQuickMessage = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!businessType || !offer) {
+      toast.error('Please set your business details in settings first');
+      return;
+    }
+    setLoadingMessage(true);
+    try {
+      const result = await generateOutreachMessage(businessType, offer, 'professional', lead.name, lead.category);
+      setQuickMessage(result);
+      toast.success('AI Message generated');
+    } catch (error) {
+      toast.error('Failed to generate message');
+    } finally {
+      setLoadingMessage(false);
+    }
   };
 
   const stripHtml = (html: string) => {
@@ -23,6 +50,10 @@ export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProp
     tmp.innerHTML = html;
     return tmp.textContent || tmp.innerText || "";
   };
+
+  const tags = lead.tags || [];
+  const displayTags = showAllTags ? tags : tags.slice(0, 3);
+  const hasMoreTags = tags.length > 3;
 
   return (
     <div 
@@ -55,9 +86,10 @@ export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProp
               <p className="text-[10px] text-muted-foreground truncate">{lead.address}</p>
               <button 
                 onClick={(e) => copyToClipboard(e, lead.address || '', 'Address')}
-                className="p-1 hover:bg-accent rounded transition-colors opacity-0 group-hover:opacity-100"
+                className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground/60 hover:text-primary"
+                title="Copy Address"
               >
-                <Copy className="w-2.5 h-2.5 text-muted-foreground" />
+                <Copy className="w-2.5 h-2.5" />
               </button>
             </div>
           </div>
@@ -111,9 +143,25 @@ export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProp
             </div>
             <button 
               onClick={(e) => copyToClipboard(e, lead.phoneNumber!, 'Phone number')}
-              className="p-1 hover:bg-accent rounded transition-colors opacity-0 group-hover/item:opacity-100"
+              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground/60 hover:text-primary"
+              title="Copy Phone"
             >
-              <Copy className="w-3 h-3 text-muted-foreground" />
+              <Copy className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+        {lead.email && (
+          <div className="flex items-center justify-between group/item">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground truncate">
+              <Mail className="w-3 h-3" />
+              {lead.email}
+            </div>
+            <button 
+              onClick={(e) => copyToClipboard(e, lead.email!, 'Email')}
+              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground/60 hover:text-primary"
+              title="Copy Email"
+            >
+              <Copy className="w-3 h-3" />
             </button>
           </div>
         )}
@@ -147,6 +195,19 @@ export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProp
         </div>
       )}
 
+      {customFieldDefinitions.length > 0 && lead.customFields && Object.keys(lead.customFields).length > 0 && (
+        <div className="mb-4 grid grid-cols-1 gap-2">
+          {customFieldDefinitions
+            .filter(def => lead.customFields?.[def.id])
+            .map(def => (
+              <div key={def.id} className="flex items-center justify-between p-2 bg-accent/10 rounded-lg border border-border/30">
+                <span className="text-[9px] font-bold text-muted-foreground uppercase">{def.label}</span>
+                <span className="text-[10px] font-medium truncate max-w-[120px]">{lead.customFields?.[def.id]}</span>
+              </div>
+            ))}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-accent/30 rounded-xl p-2 text-center">
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Rating</p>
@@ -159,6 +220,90 @@ export default function LeadCard({ lead, onSave, onView, isSaved }: LeadCardProp
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Reviews</p>
           <p className="font-bold text-sm">{lead.userRatingsTotal || 0}</p>
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5 mb-4">
+        <AnimatePresence initial={false}>
+          {displayTags.map((tag, idx) => (
+            <motion.span 
+              key={`${tag}-${idx}`}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="px-2 py-0.5 bg-primary/5 border border-primary/10 rounded-md text-[9px] font-bold text-primary uppercase tracking-wider"
+            >
+              {tag}
+            </motion.span>
+          ))}
+        </AnimatePresence>
+        {hasMoreTags && (
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowAllTags(!showAllTags);
+            }}
+            className="px-2 py-0.5 bg-accent/50 hover:bg-accent border border-border rounded-md text-[9px] font-bold text-muted-foreground uppercase tracking-wider transition-colors flex items-center gap-1"
+          >
+            {showAllTags ? (
+              <>Hide <ChevronUp className="w-2.5 h-2.5" /></>
+            ) : (
+              <>+{tags.length - 3} more <ChevronDown className="w-2.5 h-2.5" /></>
+            )}
+          </button>
+        )}
+      </div>
+
+      {(lead.phoneNumber || lead.email) && (
+        <div className="flex gap-2 mb-4">
+          {lead.phoneNumber && (
+            <a 
+              href={`tel:${lead.phoneNumber}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 flex items-center justify-center gap-2 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold transition-all border border-primary/20"
+            >
+              <Phone className="w-3 h-3" />
+              Call
+            </a>
+          )}
+          {lead.email && (
+            <a 
+              href={`mailto:${lead.email}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 flex items-center justify-center gap-2 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold transition-all border border-primary/20"
+            >
+              <Mail className="w-3 h-3" />
+              Email
+            </a>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2 mb-4">
+        <button
+          onClick={handleQuickMessage}
+          disabled={loadingMessage}
+          className="w-full py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 border border-blue-500/20 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
+        >
+          {loadingMessage ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+          {loadingMessage ? 'Generating...' : 'Quick Message'}
+        </button>
+
+        {quickMessage && (
+          <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-blue-500 uppercase">AI Generated Message</span>
+              <button 
+                onClick={(e) => copyToClipboard(e, quickMessage.cold_dm, 'AI Message')}
+                className="p-1 hover:bg-blue-500/10 rounded transition-colors"
+              >
+                <Copy className="w-3 h-3 text-blue-500" />
+              </button>
+            </div>
+            <p className="text-[10px] leading-relaxed text-muted-foreground italic">
+              "{quickMessage.cold_dm}"
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

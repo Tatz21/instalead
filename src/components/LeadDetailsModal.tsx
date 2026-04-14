@@ -33,6 +33,7 @@ export default function LeadDetailsModal({
   customFieldDefinitions = []
 }: LeadDetailsModalProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
@@ -111,6 +112,18 @@ export default function LeadDetailsModal({
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Task[];
       setTasks(data.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, path);
+    });
+    return () => unsubscribe();
+  }, [lead.id, lead.ownerId]);
+
+  useEffect(() => {
+    const path = 'messages';
+    const q = query(collection(db, path), where('leadId', '==', lead.id), where('ownerId', '==', lead.ownerId));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMessages(data.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, path);
     });
@@ -471,6 +484,40 @@ export default function LeadDetailsModal({
                 ))}
               </div>
             </section>
+
+            {messages.length > 0 && (
+              <section className="space-y-4">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-blue-500" />
+                  AI Message History
+                </h3>
+                <div className="space-y-3">
+                  {messages.map((msg) => (
+                    <div key={msg.id} className="bg-accent/10 border border-border rounded-2xl p-4 space-y-2 relative group">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded-full">
+                            {msg.type === 'cold_dm' ? 'Cold Outreach' : 'Follow-up'}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Date(msg.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => copyToClipboard(msg.content, 'Message')}
+                          className="p-1.5 hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <p className="text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground italic">
+                        "{msg.content}"
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
 
           {/* Right Column: Tasks & Status */}
