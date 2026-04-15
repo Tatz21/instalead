@@ -422,6 +422,7 @@ function LeadsScreen({
   const [newFieldType, setNewFieldType] = useState<'text' | 'number' | 'date'>('text');
   const [addingField, setAddingField] = useState(false);
   const [filterTag, setFilterTag] = useState<string>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterScoreMin, setFilterScoreMin] = useState<number>(0);
   const [filterScoreMax, setFilterScoreMax] = useState<number>(100);
   const [showFilters, setShowFilters] = useState(false);
@@ -506,7 +507,12 @@ function LeadsScreen({
 
   const filteredLeads = leads
     .filter(l => filter === 'all' ? true : l.status === filter)
-    .filter(l => filterTag === 'all' ? true : l.tags?.includes(filterTag))
+    .filter(l => {
+      if (filterTag === 'all') return true;
+      if (filterTag === 'none') return !l.tags || l.tags.length === 0;
+      return l.tags?.includes(filterTag);
+    })
+    .filter(l => filterCategory === 'all' ? true : l.category === filterCategory)
     .filter(l => {
       const score = l.aiScore || 0;
       return score >= filterScoreMin && score <= filterScoreMax;
@@ -689,6 +695,7 @@ function LeadsScreen({
   };
 
   const allTags = Array.from(new Set(leads.flatMap(l => l.tags || []))).sort();
+  const allCategories = Array.from(new Set(leads.map(l => l.category).filter(Boolean))).sort() as string[];
 
   return (
     <div className="space-y-8" data-tour="leads">
@@ -854,15 +861,16 @@ function LeadsScreen({
           >
             <Filter className="w-4 h-4" />
             Filters
-            {(filterTag !== 'all' || filterScoreMin > 0 || filterScoreMax < 100 || filter !== 'all') && (
+            {(filterTag !== 'all' || filterCategory !== 'all' || filterScoreMin > 0 || filterScoreMax < 100 || filter !== 'all') && (
               <span className="w-2 h-2 bg-red-500 rounded-full" />
             )}
           </button>
-          {(filterTag !== 'all' || filterScoreMin > 0 || filterScoreMax < 100 || filter !== 'all') && (
+          {(filterTag !== 'all' || filterCategory !== 'all' || filterScoreMin > 0 || filterScoreMax < 100 || filter !== 'all') && (
             <button 
               onClick={() => {
                 setFilter('all');
                 setFilterTag('all');
+                setFilterCategory('all');
                 setFilterScoreMin(0);
                 setFilterScoreMax(100);
               }}
@@ -893,7 +901,7 @@ function LeadsScreen({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-card border border-border rounded-3xl p-6 shadow-xl grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-card border border-border rounded-3xl p-6 shadow-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase text-muted-foreground">Status</label>
                 <select 
@@ -910,19 +918,33 @@ function LeadsScreen({
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase text-muted-foreground">Filter by Tag</label>
+                <label className="text-[10px] font-bold uppercase text-muted-foreground">Tag</label>
                 <select 
                   value={filterTag}
                   onChange={e => setFilterTag(e.target.value)}
                   className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="all">All Tags</option>
+                  <option value="none">No Tags</option>
                   {allTags.map(tag => (
                     <option key={tag} value={tag}>{tag}</option>
                   ))}
                 </select>
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase text-muted-foreground">Category</label>
+                <select 
+                  value={filterCategory}
+                  onChange={e => setFilterCategory(e.target.value)}
+                  className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="all">All Categories</option>
+                  {allCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2 lg:col-span-2">
                 <label className="text-[10px] font-bold uppercase text-muted-foreground">AI Score Range ({filterScoreMin} - {filterScoreMax})</label>
                 <div className="flex items-center gap-4">
                   <input 
@@ -930,7 +952,7 @@ function LeadsScreen({
                     min="0" 
                     max="100" 
                     value={filterScoreMin}
-                    onChange={e => setFilterScoreMin(parseInt(e.target.value))}
+                    onChange={e => setFilterScoreMin(Math.min(parseInt(e.target.value), filterScoreMax))}
                     className="flex-1 accent-primary"
                   />
                   <input 
@@ -938,13 +960,14 @@ function LeadsScreen({
                     min="0" 
                     max="100" 
                     value={filterScoreMax}
-                    onChange={e => setFilterScoreMax(parseInt(e.target.value))}
+                    onChange={e => setFilterScoreMax(Math.max(parseInt(e.target.value), filterScoreMin))}
                     className="flex-1 accent-primary"
                   />
                   <button 
                     onClick={() => {
                       setFilter('all');
                       setFilterTag('all');
+                      setFilterCategory('all');
                       setFilterScoreMin(0);
                       setFilterScoreMax(100);
                     }}

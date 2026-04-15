@@ -380,12 +380,23 @@ export default function LeadDetailsModal({
                 <div className="bg-card border border-border p-4 rounded-2xl space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase">Phone Number</label>
-                    <button 
-                      onClick={() => copyToClipboard(editPhone, 'Phone number')}
-                      className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground"
-                    >
-                      <Copy className="w-3 h-3" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      {editPhone && (
+                        <a 
+                          href={`tel:${editPhone.replace(/\s+/g, '')}`}
+                          className="p-1 hover:bg-primary/10 text-primary rounded transition-colors"
+                          title="Call Lead"
+                        >
+                          <Phone className="w-3 h-3" />
+                        </a>
+                      )}
+                      <button 
+                        onClick={() => copyToClipboard(editPhone, 'Phone number')}
+                        className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
