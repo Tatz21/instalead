@@ -28,30 +28,37 @@ export default function LandingPage({ onGetStarted }: { onGetStarted: () => void
       <section className="pt-32 pb-20 px-4">
         <div className="max-w-5xl mx-auto text-center">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="relative"
           >
-            <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold mb-6 tracking-wider uppercase">
-              The Future of Local Business Outreach
+            <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-[10px] font-black mb-12 tracking-[0.3em] uppercase border border-primary/20">
+              Intelligence System v2.0
             </span>
-            <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight mb-6 leading-[1.1]">
-              Turn Google Maps into <br />
-              <span className="text-primary">High-Value Leads</span>
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-              Find, score, and reach out to local businesses using AI. 
-              Automate your Google Maps outreach workflow and grow your agency faster.
+            <div className="relative group">
+              <h1 className="text-6xl md:text-[10rem] font-black tracking-tighter mb-8 leading-[0.8] uppercase italic mix-blend-difference">
+                Extract <br />
+                <span className="text-primary not-italic">Value.</span>
+              </h1>
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/20 blur-3xl rounded-full group-hover:bg-primary/40 transition-colors animate-pulse" />
+            </div>
+            
+            <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-tight font-medium tracking-tight">
+              Turn the world's largest business database into a <span className="text-foreground border-b-2 border-primary">stream of high-quality leads</span> using autonomous AI discovery.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
               <button 
                 onClick={onGetStarted}
-                className="w-full sm:w-auto px-8 py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg flex items-center justify-center gap-2 hover:scale-105 transition-all shadow-xl shadow-primary/20"
+                className="group relative w-full sm:w-auto px-10 py-5 bg-primary text-primary-foreground rounded-full font-black text-xl flex items-center justify-center gap-3 hover:scale-105 transition-all shadow-[0_20px_50px_rgba(99,102,241,0.3)] overflow-hidden"
               >
-                Start Free Trial <ArrowRight className="w-5 h-5" />
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                <span className="relative z-10">START EXTRACTION</span>
+                <ArrowRight className="relative z-10 w-6 h-6 group-hover:translate-x-1 transition-transform" />
               </button>
-              <button className="w-full sm:w-auto px-8 py-4 bg-accent text-accent-foreground rounded-2xl font-bold text-lg hover:bg-accent/80 transition-all">
-                Watch Demo
+              <button className="w-full sm:w-auto px-10 py-5 bg-secondary/50 backdrop-blur-md text-foreground border border-border rounded-full font-black text-xl hover:bg-secondary transition-all">
+                VIEW REEL
               </button>
             </div>
           </motion.div>

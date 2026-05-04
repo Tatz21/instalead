@@ -25,31 +25,47 @@ export default function Layout({ theme, onToggleTheme }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0 md:pl-64">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 border-r border-border bg-card p-6">
-        <div className="flex items-center justify-between mb-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+      <aside className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-64 border-r border-border bg-card/50 backdrop-blur-xl p-6">
+        <div className="flex items-center justify-between mb-12">
+          <div className="flex items-center gap-3 group translate-x-1">
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 transition-transform group-hover:scale-110">
               <MapPin className="text-primary-foreground w-6 h-6" />
             </div>
-            <h1 className="text-xl font-display font-bold tracking-tight">InstaLead AI</h1>
+            <div className="flex flex-col">
+              <h1 className="text-lg font-black tracking-tighter leading-none italic uppercase">InstaLead</h1>
+              <span className="text-[10px] font-bold text-primary tracking-[0.2em] uppercase">Intelligence</span>
+            </div>
           </div>
         </div>
         
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 space-y-1">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               data-tour={item.tour}
               className={({ isActive }: { isActive: boolean }) => cn(
-                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+                "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 relative group",
                 isActive 
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  ? "text-primary font-bold bg-primary/10" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
               )}
             >
-              <item.icon className="w-5 h-5" />
-              <span className="font-medium">{item.label}</span>
+              {({ isActive }) => (
+                <>
+                  <item.icon className={cn(
+                    "w-5 h-5 transition-transform duration-300",
+                    isActive ? "scale-110" : "group-hover:scale-110"
+                  )} />
+                  <span className="text-sm tracking-tight">{item.label}</span>
+                  {isActive && (
+                    <motion.div 
+                      layoutId="active-pill"
+                      className="absolute left-0 w-1 h-5 bg-primary rounded-r-full"
+                    />
+                  )}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>

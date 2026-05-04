@@ -13,23 +13,24 @@ interface StatsCardProps {
 
 export default function StatsCard({ label, value, icon: Icon, trend, trendUp, className }: StatsCardProps) {
   return (
-    <div className={cn("bg-card border border-border rounded-2xl p-5", className)}>
-      <div className="flex justify-between items-start mb-4">
-        <div className="p-2 rounded-xl bg-primary/10 text-primary">
-          <Icon className="w-6 h-6" />
+    <div className={cn("bg-card border border-border rounded-xl p-5 relative overflow-hidden group", className)}>
+      <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 blur-3xl -mr-12 -mt-12 group-hover:bg-primary/10 transition-colors" />
+      <div className="flex justify-between items-start mb-6 relative z-10">
+        <div className="p-2.5 rounded-xl bg-secondary border border-border text-primary shadow-sm">
+          <Icon className="w-5 h-5 transition-transform group-hover:scale-110" />
         </div>
         {trend && (
           <span className={cn(
-            "text-xs font-bold px-2 py-1 rounded-lg",
-            trendUp ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
+            "text-[10px] font-mono font-bold px-2 py-1 rounded-md border",
+            trendUp ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"
           )}>
             {trend}
           </span>
         )}
       </div>
-      <div>
-        <p className="text-sm text-muted-foreground font-medium mb-1">{label}</p>
-        <h3 className="text-2xl font-display font-bold">{value}</h3>
+      <div className="relative z-10">
+        <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground mb-1">{label}</p>
+        <h3 className="text-3xl font-mono font-bold tracking-tighter">{value}</h3>
       </div>
     </div>
   );

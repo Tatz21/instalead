@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, MapPin, Phone, Globe, Star, MoreVertical, ExternalLink, Copy, MessageSquare, HelpCircle, Mail, Zap, RefreshCw, ChevronDown, ChevronUp, Tag as TagIcon } from 'lucide-react';
+import { 
+  User, Users, MapPin, Phone, Globe, Star, MoreVertical, ExternalLink, 
+  Copy, MessageSquare, HelpCircle, Mail, Zap, RefreshCw, 
+  ChevronDown, ChevronUp, Tag as TagIcon, Hash, Calendar, Building
+} from 'lucide-react';
 import { Lead, CustomFieldDefinition } from '../types';
-import { cn } from '../lib/utils';
+import { cn, formatNumber } from '../lib/utils';
 import { toast } from 'sonner';
 import { generateOutreachMessage } from '../services/aiService';
 
@@ -54,39 +58,91 @@ export default function LeadCard({ lead, onSave, onView, isSaved, businessType, 
   const tags = lead.tags || [];
   const displayTags = showAllTags ? tags : tags.slice(0, 3);
   const hasMoreTags = tags.length > 3;
+  const createdAt = lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : null;
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'new': return 'blue';
+      case 'contacted': return 'yellow';
+      case 'replied': return 'purple';
+      case 'converted': return 'green';
+      case 'lost': return 'red';
+      default: return 'gray';
+    }
+  };
+
+  const statusColor = lead.status ? getStatusColor(lead.status) : 'gray';
 
   return (
     <div 
-      className="glass-dark rounded-2xl p-5 hover:border-primary/50 transition-all duration-300 group cursor-pointer"
+      className="glass-dark rounded-3xl p-5 hover:border-primary/50 transition-all duration-300 group cursor-pointer relative overflow-hidden flex flex-col h-full border border-border/50"
       onClick={onView}
     >
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center overflow-hidden border border-border shrink-0">
-            <MapPin className="w-6 h-6 text-muted-foreground" />
+      {/* Status Glow / Indicator */}
+      <div className={cn(
+        "absolute top-0 right-0 w-32 h-32 blur-[60px] opacity-10 pointer-events-none transition-colors duration-500",
+        statusColor === 'blue' ? "bg-blue-500" :
+        statusColor === 'yellow' ? "bg-yellow-500" :
+        statusColor === 'purple' ? "bg-purple-500" :
+        statusColor === 'green' ? "bg-green-500" :
+        statusColor === 'red' ? "bg-red-500" : "bg-muted"
+      )} />
+
+      <div className="flex justify-between items-start mb-6 relative z-10">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="relative">
+            <div className={cn(
+              "w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden border shrink-0 transition-all duration-300 group-hover:scale-105",
+              statusColor === 'blue' ? "bg-blue-500/5 border-blue-500/20" :
+              statusColor === 'yellow' ? "bg-yellow-500/5 border-yellow-500/20" :
+              statusColor === 'purple' ? "bg-purple-500/5 border-purple-500/20" :
+              statusColor === 'green' ? "bg-green-500/5 border-green-500/20" :
+              statusColor === 'red' ? "bg-red-500/5 border-red-500/20" : "bg-secondary border-border"
+            )}>
+              {lead.category?.toLowerCase().includes('gym') ? <Zap className="w-6 h-6 text-primary" /> :
+               lead.category?.toLowerCase().includes('cafe') || lead.category?.toLowerCase().includes('restaurant') ? <Building className="w-6 h-6 text-primary" /> :
+               <MapPin className="w-6 h-6 text-primary" />}
+            </div>
+            {/* Tiny status dot on avatar */}
+            <div className={cn(
+              "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background",
+              statusColor === 'blue' ? "bg-blue-500" :
+              statusColor === 'yellow' ? "bg-yellow-500" :
+              statusColor === 'purple' ? "bg-purple-500" :
+              statusColor === 'green' ? "bg-green-500" :
+              statusColor === 'red' ? "bg-red-500" : "bg-muted"
+            )} />
           </div>
           <div className="min-w-0">
-            <h3 className="font-bold text-foreground flex items-center gap-2 truncate">
+            <div className="flex items-center gap-2 mb-1">
               {lead.status && (
                 <div className={cn(
-                  "px-1.5 py-0.5 rounded-md text-[8px] font-bold uppercase shrink-0",
-                  lead.status === 'new' ? "bg-blue-500/20 text-blue-500 border border-blue-500/30" :
-                  lead.status === 'contacted' ? "bg-yellow-500/20 text-yellow-500 border border-yellow-500/30" :
-                  lead.status === 'replied' ? "bg-purple-500/20 text-purple-500 border border-purple-500/30" :
-                  lead.status === 'converted' ? "bg-green-500/20 text-green-500 border border-green-500/30" :
-                  lead.status === 'lost' ? "bg-red-500/20 text-red-500 border border-red-500/30" : "bg-muted text-muted-foreground"
+                  "px-2 py-0.5 rounded-md text-[9px] font-mono font-bold uppercase tracking-wider shrink-0 border",
+                  statusColor === 'blue' ? "bg-blue-500/20 text-blue-500 border-blue-500/30" :
+                  statusColor === 'yellow' ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30" :
+                  statusColor === 'purple' ? "bg-purple-500/20 text-purple-500 border-purple-500/30" :
+                  statusColor === 'green' ? "bg-green-500/20 text-green-500 border-green-500/30" :
+                  statusColor === 'red' ? "bg-red-500/20 text-red-500 border-red-500/30" : "bg-muted text-muted-foreground"
                 )}>
                   {lead.status}
                 </div>
               )}
+              {createdAt && (
+                <span className="text-[10px] font-mono text-muted-foreground/60 flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {createdAt}
+                </span>
+              )}
+            </div>
+            <h3 className="font-bold text-lg text-foreground flex items-center gap-2 truncate leading-tight">
               <span className="truncate">{lead.name}</span>
-              <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </h3>
-            <div className="flex items-center gap-1 min-w-0">
-              <p className="text-[10px] text-muted-foreground truncate">{lead.address}</p>
+            <div className="flex items-center gap-1 min-w-0 mt-0.5">
+              <p className="text-[11px] text-muted-foreground truncate opacity-70 leading-none">{lead.address}</p>
               <button 
                 onClick={(e) => copyToClipboard(e, lead.address || '', 'Address')}
-                className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground/60 hover:text-primary"
+                className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground/40 hover:text-primary"
                 title="Copy Address"
               >
                 <Copy className="w-2.5 h-2.5" />
@@ -94,16 +150,16 @@ export default function LeadCard({ lead, onSave, onView, isSaved, businessType, 
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 relative z-10 font-mono">
           {lead.aiScore !== undefined && (
             <div className="relative group/score">
               <div className={cn(
-                "w-10 h-10 rounded-xl flex flex-col items-center justify-center text-[10px] font-bold border cursor-help",
-                lead.aiScore > 70 ? "bg-green-500/10 text-green-500 border-green-500/20" : 
-                lead.aiScore > 40 ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"
+                "w-12 h-12 rounded-xl flex flex-col items-center justify-center border transition-all duration-300 hover:scale-110",
+                lead.aiScore > 70 ? "bg-green-500/10 text-green-500 border-green-500/20 shadow-green-500/5" : 
+                lead.aiScore > 40 ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20 shadow-yellow-500/5" : "bg-red-500/10 text-red-500 border-red-500/20 shadow-red-500/5"
               )}>
-                <span className="text-[8px] opacity-70">SCORE</span>
-                {lead.aiScore}
+                <span className="text-[7px] font-bold opacity-60 tracking-widest">AI%</span>
+                <span className="text-sm font-bold leading-none tracking-tighter">{lead.aiScore}</span>
               </div>
               
               {/* Tooltip */}
@@ -134,41 +190,47 @@ export default function LeadCard({ lead, onSave, onView, isSaved, businessType, 
         </div>
       </div>
 
-      <div className="space-y-2 mb-4">
+      <div className="space-y-3 mb-6 relative z-10 flex-1">
         {lead.phoneNumber && (
           <div className="flex items-center justify-between group/item">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground truncate">
-              <Phone className="w-3 h-3" />
+            <div className="flex items-center gap-3 text-xs text-muted-foreground/90 font-medium truncate">
+              <div className="w-6 h-6 rounded-lg bg-primary/5 flex items-center justify-center shrink-0 border border-primary/10">
+                <Phone className="w-3 h-3 text-primary" />
+              </div>
               {lead.phoneNumber}
             </div>
             <button 
               onClick={(e) => copyToClipboard(e, lead.phoneNumber!, 'Phone number')}
-              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground/60 hover:text-primary"
+              className="p-1.5 hover:bg-accent rounded-lg transition-colors text-muted-foreground/40 hover:text-primary"
               title="Copy Phone"
             >
-              <Copy className="w-3 h-3" />
+              <Copy className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
         {lead.email && (
           <div className="flex items-center justify-between group/item">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground truncate">
-              <Mail className="w-3 h-3" />
+            <div className="flex items-center gap-3 text-xs text-muted-foreground/90 font-medium truncate">
+              <div className="w-6 h-6 rounded-lg bg-pink-500/5 flex items-center justify-center shrink-0 border border-pink-500/10">
+                <Mail className="w-3 h-3 text-pink-500" />
+              </div>
               {lead.email}
             </div>
             <button 
               onClick={(e) => copyToClipboard(e, lead.email!, 'Email')}
-              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground/60 hover:text-primary"
+              className="p-1.5 hover:bg-accent rounded-lg transition-colors text-muted-foreground/40 hover:text-primary"
               title="Copy Email"
             >
-              <Copy className="w-3 h-3" />
+              <Copy className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
         {lead.website ? (
           <div className="flex items-center justify-between group/item">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground truncate">
-              <Globe className="w-3 h-3" />
+            <div className="flex items-center gap-3 text-xs text-muted-foreground/90 font-medium truncate">
+              <div className="w-6 h-6 rounded-lg bg-blue-500/5 flex items-center justify-center shrink-0 border border-blue-500/10">
+                <Globe className="w-3 h-3 text-blue-500" />
+              </div>
               <a 
                 href={lead.website} 
                 target="_blank" 
@@ -181,99 +243,106 @@ export default function LeadCard({ lead, onSave, onView, isSaved, businessType, 
             </div>
             <button 
               onClick={(e) => copyToClipboard(e, lead.website!, 'Website URL')}
-              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground/60 hover:text-primary"
+              className="p-1.5 hover:bg-accent rounded-lg transition-colors text-muted-foreground/40 hover:text-primary"
               title="Copy Website"
             >
-              <Copy className="w-3 h-3" />
+              <Copy className="w-3.5 h-3.5" />
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground truncate">
-            <Globe className="w-3 h-3" />
+          <div className="flex items-center gap-3 text-xs text-muted-foreground/50 truncate">
+            <div className="w-6 h-6 rounded-lg bg-accent flex items-center justify-center shrink-0 border border-border">
+              <Globe className="w-3 h-3 opacity-30" />
+            </div>
             <span className="italic opacity-50">No website found</span>
           </div>
         )}
       </div>
 
-      {lead.notes && (
-        <div className="mb-4 p-2 bg-accent/20 rounded-xl border border-border/50">
-          <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground mb-1">
-            <MessageSquare className="w-3 h-3" />
-            NOTES
+      <div className="space-y-4 mb-4 mt-auto relative z-10">
+        {lead.notes && (
+          <div className="p-3 bg-accent/30 rounded-2xl border border-border/50 relative">
+            <div className="flex items-center gap-1.5 text-[9px] font-black text-muted-foreground/60 mb-2 tracking-widest uppercase">
+              <MessageSquare className="w-3 h-3" />
+              LEAD NOTES
+            </div>
+            <p className="text-[11px] text-muted-foreground/90 line-clamp-3 leading-relaxed italic">
+              "{stripHtml(lead.notes)}"
+            </p>
           </div>
-          <p className="text-[10px] text-muted-foreground line-clamp-2 italic">
-            "{stripHtml(lead.notes)}"
-          </p>
-        </div>
-      )}
-
-      {customFieldDefinitions.length > 0 && lead.customFields && Object.keys(lead.customFields).length > 0 && (
-        <div className="mb-4 grid grid-cols-1 gap-2">
-          {customFieldDefinitions
-            .filter(def => lead.customFields?.[def.id])
-            .map(def => (
-              <div key={def.id} className="flex items-center justify-between p-2 bg-accent/10 rounded-lg border border-border/30">
-                <span className="text-[9px] font-bold text-muted-foreground uppercase">{def.label}</span>
-                <span className="text-[10px] font-medium truncate max-w-[120px]">{lead.customFields?.[def.id]}</span>
-              </div>
-            ))}
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-accent/30 rounded-xl p-2 text-center">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Rating</p>
-          <div className="flex items-center justify-center gap-1 font-bold text-sm">
-            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-            {lead.rating || 'N/A'}
-          </div>
-        </div>
-        <div className="bg-accent/30 rounded-xl p-2 text-center">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Reviews</p>
-          <p className="font-bold text-sm">{lead.userRatingsTotal || 0}</p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-1.5 mb-4">
-        <AnimatePresence initial={false}>
-          {displayTags.map((tag, idx) => (
-            <motion.span 
-              key={`${tag}-${idx}`}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="px-2 py-0.5 bg-primary/5 border border-primary/10 rounded-md text-[9px] font-bold text-primary uppercase tracking-wider"
-            >
-              {tag}
-            </motion.span>
-          ))}
-        </AnimatePresence>
-        {hasMoreTags && (
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowAllTags(!showAllTags);
-            }}
-            className="px-2 py-0.5 bg-accent/50 hover:bg-accent border border-border rounded-md text-[9px] font-bold text-muted-foreground uppercase tracking-wider transition-colors flex items-center gap-1"
-          >
-            {showAllTags ? (
-              <>Hide <ChevronUp className="w-2.5 h-2.5" /></>
-            ) : (
-              <>+{tags.length - 3} more <ChevronDown className="w-2.5 h-2.5" /></>
-            )}
-          </button>
         )}
+
+        {customFieldDefinitions.length > 0 && lead.customFields && Object.keys(lead.customFields).length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            {customFieldDefinitions
+              .filter(def => lead.customFields?.[def.id])
+              .map(def => (
+                <div key={def.id} className="flex flex-col p-2 bg-primary/5 rounded-xl border border-primary/10">
+                  <span className="text-[8px] font-black text-primary/60 uppercase tracking-tight mb-0.5">{def.label}</span>
+                  <span className="text-[10px] font-bold truncate text-foreground/80">{lead.customFields?.[def.id]}</span>
+                </div>
+              ))}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-secondary/30 rounded-xl p-3 flex flex-col items-center justify-center gap-1 border border-border/40 font-mono">
+            <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-[0.2em]">Rating</span>
+            <div className="flex items-center gap-1.5">
+              <Star className="w-3.5 h-3.5 text-yellow-500/80 fill-yellow-500/20" />
+              <span className="font-bold text-sm tracking-tighter">{lead.rating || '---'}</span>
+            </div>
+          </div>
+          <div className="bg-secondary/30 rounded-xl p-3 flex flex-col items-center justify-center gap-1 border border-border/40 font-mono">
+            <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-[0.2em]">Reviews</span>
+            <div className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-primary/80" />
+              <span className="font-bold text-sm tracking-tighter">{formatNumber(lead.userRatingsTotal || 0)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          <AnimatePresence initial={false}>
+            {displayTags.map((tag, idx) => (
+              <motion.span 
+                key={`${tag}-${idx}`}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-lg text-[9px] font-black text-primary uppercase tracking-tight"
+              >
+                {tag}
+              </motion.span>
+            ))}
+          </AnimatePresence>
+          {hasMoreTags && (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowAllTags(!showAllTags);
+              }}
+              className="px-2.5 py-1 bg-accent/50 hover:bg-accent border border-border rounded-lg text-[9px] font-black text-muted-foreground uppercase tracking-tight transition-colors flex items-center gap-1"
+            >
+              {showAllTags ? (
+                <>Less <ChevronUp className="w-2.5 h-2.5" /></>
+              ) : (
+                <>+{tags.length - 3} <ChevronDown className="w-2.5 h-2.5" /></>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
-      {(lead.phoneNumber || lead.email) && (
-        <div className="flex gap-2 mb-4">
+      <div className="space-y-3 mt-2 relative z-10">
+        <div className="flex gap-2">
           {lead.phoneNumber && (
             <a 
               href={`tel:${lead.phoneNumber.replace(/\s+/g, '')}`}
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 flex items-center justify-center gap-2 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold transition-all border border-primary/20"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground rounded-2xl text-[11px] font-black tracking-widest uppercase transition-all duration-300 border border-primary/20 shadow-lg shadow-primary/5"
             >
-              <Phone className="w-3 h-3" />
+              <Phone className="w-3.5 h-3.5" />
               Call
             </a>
           )}
@@ -281,56 +350,52 @@ export default function LeadCard({ lead, onSave, onView, isSaved, businessType, 
             <a 
               href={`mailto:${lead.email}`}
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 flex items-center justify-center gap-2 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold transition-all border border-primary/20"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-pink-500/10 hover:bg-pink-500 text-pink-500 hover:text-white rounded-2xl text-[11px] font-black tracking-widest uppercase transition-all duration-300 border border-pink-500/20 shadow-lg shadow-pink-500/5"
             >
-              <Mail className="w-3 h-3" />
+              <Mail className="w-3.5 h-3.5" />
               Email
             </a>
           )}
         </div>
-      )}
 
-      <div className="flex flex-col gap-2 mb-4">
         <button
           onClick={handleQuickMessage}
           disabled={loadingMessage}
-          className="w-full py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 border border-blue-500/20 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
+          className="w-full py-3 bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white border border-blue-500/20 rounded-2xl text-[11px] font-black tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/5"
         >
-          {loadingMessage ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
-          {loadingMessage ? 'Generating...' : 'Quick Message'}
+          {loadingMessage ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+          {loadingMessage ? 'Thinking...' : 'AI Message'}
         </button>
 
         {quickMessage && (
-          <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-2">
+          <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl space-y-3 animate-in fade-in slide-in-from-top-2">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-blue-500 uppercase">AI Generated Message</span>
+              <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Targeted Hook</span>
               <button 
                 onClick={(e) => copyToClipboard(e, quickMessage.cold_dm, 'AI Message')}
-                className="p-1 hover:bg-blue-500/10 rounded transition-colors"
+                className="p-1.5 hover:bg-blue-500/10 rounded-lg transition-colors"
               >
-                <Copy className="w-3 h-3 text-blue-500" />
+                <Copy className="w-3.5 h-3.5 text-blue-500" />
               </button>
             </div>
-            <p className="text-[10px] leading-relaxed text-muted-foreground italic">
+            <p className="text-[11px] leading-relaxed text-muted-foreground italic font-medium">
               "{quickMessage.cold_dm}"
             </p>
           </div>
         )}
-      </div>
 
-      <div className="flex items-center gap-2">
         {onSave && (
           <button
             onClick={onSave}
             disabled={isSaved}
             className={cn(
-              "flex-1 py-2 rounded-xl text-sm font-bold transition-all duration-200",
+              "w-full py-3 rounded-2xl text-xs font-black tracking-widest uppercase transition-all duration-300",
               isSaved 
-                ? "bg-muted text-muted-foreground cursor-not-allowed" 
-                : "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]"
+                ? "bg-muted text-muted-foreground cursor-not-allowed opacity-50" 
+                : "bg-primary text-primary-foreground shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] border border-primary hover:bg-primary/90"
             )}
           >
-            {isSaved ? 'Saved' : 'Save Lead'}
+            {isSaved ? 'SAVED' : 'SAVE LEAD'}
           </button>
         )}
       </div>

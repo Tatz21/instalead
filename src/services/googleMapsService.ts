@@ -1,5 +1,5 @@
 import { Lead } from '../types';
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 // Initialize Gemini
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
@@ -22,34 +22,20 @@ export const googleMapsService = {
       Return the data as a JSON array of objects. Ensure you return as many results as possible (aim for 20).`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash-exp",
+        model: "gemini-3-flash-preview",
         contents: prompt,
         config: {
           tools: [
             { googleMaps: {} }
           ],
           toolConfig: { includeServerSideToolInvocations: true },
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                address: { type: Type.STRING },
-                phoneNumber: { type: Type.STRING },
-                website: { type: Type.STRING },
-                rating: { type: Type.NUMBER },
-                userRatingsTotal: { type: Type.NUMBER },
-                category: { type: Type.STRING }
-              },
-              required: ["name", "address"]
-            }
-          }
         }
       });
 
-      return JSON.parse(response.text);
+      const text = response.text || '';
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : text;
+      return JSON.parse(jsonStr);
     } catch (error) {
       console.error("Error finding leads with Google Maps:", error);
       return [];

@@ -51,62 +51,106 @@ function AuthScreen() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-10">
-          <div className="w-16 h-16 rounded-2xl bg-primary mx-auto mb-4 flex items-center justify-center shadow-2xl shadow-primary/40">
-            <MapPin className="text-primary-foreground w-8 h-8" />
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-background">
+      {/* Left Pane - Branding & Intro */}
+      <div className="hidden md:flex flex-col justify-between p-12 bg-primary relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
+        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-primary via-primary to-indigo-900" />
+        
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-2xl">
+            <MapPin className="text-primary w-7 h-7" />
           </div>
-          <h1 className="text-3xl font-display font-bold tracking-tight mb-2">GoogleLead AI</h1>
-          <p className="text-muted-foreground">The ultimate Google Maps lead generation tool</p>
+          <div className="flex flex-col text-white">
+            <h1 className="text-xl font-black tracking-widest uppercase italic leading-none">InstaLead</h1>
+            <span className="text-[10px] font-bold text-white/50 tracking-[0.3em] uppercase">Intelligence System</span>
+          </div>
         </div>
 
-        <div className="bg-card border border-border rounded-3xl p-8 shadow-xl">
-          <div className="space-y-4">
+        <div className="relative z-10 max-w-lg">
+          <h2 className="text-7xl font-black text-white italic uppercase leading-[0.85] tracking-tighter mb-8">
+            Extract <br />
+            Business <br />
+            Potential<span className="text-white/30">.</span>
+          </h2>
+          <p className="text-xl text-white/70 font-medium leading-relaxed">
+            The professional grade extraction engine for modern agency growth. 
+            Automate your discovery pipeline today.
+          </p>
+        </div>
+
+        <div className="relative z-10 flex items-center gap-8 font-mono text-[10px] text-white/50 uppercase tracking-[0.2em]">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+            Node Online
+          </div>
+          <div>v2.4.0-Stable</div>
+          <div>AES-256 Encrypted</div>
+        </div>
+      </div>
+
+      {/* Right Pane - Auth Form */}
+      <div className="flex flex-col items-center justify-center p-8 md:p-20 relative">
+        <div className="w-full max-w-sm">
+          <div className="md:hidden text-center mb-12">
+            <div className="w-16 h-16 rounded-2xl bg-primary mx-auto mb-4 flex items-center justify-center shadow-2xl shadow-primary/40">
+              <MapPin className="text-primary-foreground w-8 h-8" />
+            </div>
+            <h1 className="text-3xl font-black tracking-tighter uppercase italic leading-none">InstaLead</h1>
+            <span className="text-[10px] font-bold text-primary tracking-[0.3em] uppercase">Intelligence System</span>
+          </div>
+
+          <div className="mb-10">
+            <h2 className="text-3xl font-black tracking-tight mb-2 uppercase">Welcome Back</h2>
+            <p className="text-muted-foreground text-sm font-medium italic opacity-70">Initialize your intelligence dashboard</p>
+          </div>
+
+          <div className="space-y-6">
             <button 
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white text-black rounded-xl font-bold hover:bg-gray-100 transition-all disabled:opacity-50"
+              className="w-full group relative flex items-center justify-center gap-3 h-14 bg-white text-black border border-border rounded-xl font-black text-sm tracking-widest uppercase hover:bg-gray-50 transition-all disabled:opacity-50 shadow-sm"
             >
               <Chrome className="w-5 h-5" />
               Continue with Google
+              <div className="absolute inset-0 border-2 border-primary/20 rounded-xl scale-105 opacity-0 group-hover:opacity-100 transition-all" />
             </button>
             
-            <div className="relative my-6">
+            <div className="relative py-4">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border"></div></div>
-              <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Or continue with</span></div>
+              <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest text-muted-foreground"><span className="bg-background px-4 font-mono">Terminal Access</span></div>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Email</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground font-mono">ID_EMAIL</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="email" placeholder="name@example.com" className="w-full bg-accent/50 border border-border rounded-xl py-2.5 pl-10 pr-4 focus:ring-2 focus:ring-primary outline-none transition-all" />
+                  <input type="email" placeholder="OPERATOR@SECURE.COM" className="w-full bg-accent/30 border border-border rounded-xl h-12 pl-10 pr-4 font-mono text-xs uppercase focus:ring-1 focus:ring-primary outline-none transition-all" />
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Password</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground font-mono">PASS_KEY</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="password" placeholder="••••••••" className="w-full bg-accent/50 border border-border rounded-xl py-2.5 pl-10 pr-4 focus:ring-2 focus:ring-primary outline-none transition-all" />
+                  <input type="password" placeholder="••••••••" className="w-full bg-accent/30 border border-border rounded-xl h-12 pl-10 pr-4 font-mono text-xs focus:ring-1 focus:ring-primary outline-none transition-all" />
                 </div>
               </div>
               <button 
                 disabled={loading}
-                className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full h-14 bg-secondary text-foreground border border-border rounded-xl font-black text-sm tracking-widest uppercase hover:bg-accent transition-all shadow-lg shadow-black/5"
               >
-                {isLogin ? 'Sign In' : 'Create Account'}
+                {isLogin ? 'Initialize' : 'Register Operator'}
               </button>
             </div>
-          </div>
 
-          <p className="text-center text-sm text-muted-foreground mt-8">
-            {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
-            <button onClick={() => setIsLogin(!isLogin)} className="text-primary font-bold hover:underline">
-              {isLogin ? 'Sign Up' : 'Sign In'}
-            </button>
-          </p>
+            <p className="text-center text-[10px] text-muted-foreground font-medium uppercase tracking-widest mt-8">
+              {isLogin ? "No account?" : "Existing account?"}{' '}
+              <button onClick={() => setIsLogin(!isLogin)} className="text-primary font-black hover:underline">
+                {isLogin ? 'Register' : 'Initialize'}
+              </button>
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -278,61 +322,66 @@ function FinderScreen({ onSaveLead, savedNames, businessType, offer }: { onSaveL
   };
 
   return (
-    <div className="space-y-8" data-tour="finder">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-10" data-tour="finder">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-border">
         <div>
-          <h2 className="text-3xl font-display font-bold tracking-tight">Lead Finder</h2>
-          <p className="text-muted-foreground">Search Google Maps for potential business leads.</p>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-1 h-1 bg-primary rounded-full animate-pulse" />
+            <span className="text-[10px] font-mono font-bold text-primary tracking-widest uppercase">System Engine v1.0</span>
+          </div>
+          <h2 className="text-4xl font-black tracking-tight uppercase">Lead Finder<span className="text-primary">.</span></h2>
+          <p className="text-muted-foreground text-sm mt-1">Autonomous search across Google Maps database.</p>
         </div>
-        {selectedNames.size > 0 && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            onClick={handleSaveSelected}
-            className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Save Selected ({selectedNames.size})
-          </motion.button>
-        )}
-      </header>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 h-10 px-3 py-1.5 bg-secondary/30 rounded-lg border border-border font-mono text-[10px] text-muted-foreground uppercase">
+            <TrendingUp className="w-3.5 h-3.5 text-primary" />
+            1.2k Leads/mo
+          </div>
+          {selectedNames.size > 0 && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              onClick={handleSaveSelected}
+              className="px-6 py-2 h-10 bg-primary text-primary-foreground rounded-lg font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Save Selected ({selectedNames.size})
+            </motion.button>
+          )}
+        </div>
+      </div>
 
-      <form onSubmit={handleSearch} className="bg-card border border-border rounded-3xl p-6 shadow-xl space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Keywords</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input 
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                placeholder="e.g. Gym, Cafe, Real Estate" 
-                className="w-full bg-accent/50 border border-border rounded-xl py-2.5 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary transition-all" 
-              />
-            </div>
+      <div className="group relative">
+        <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/5 to-primary/20 blur opacity-10 group-hover:opacity-20 transition-opacity" />
+        <form onSubmit={handleSearch} className="relative bg-card/50 backdrop-blur-md border border-border rounded-2xl p-2 flex flex-col md:flex-row items-center gap-2 shadow-2xl">
+          <div className="flex-1 w-full flex items-center gap-3 px-4 h-14 bg-accent/30 rounded-xl border border-transparent focus-within:border-primary/30 transition-all font-mono">
+            <Search className="w-5 h-5 text-muted-foreground" />
+            <input 
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="KEYWORDS (E.G. GYMS)" 
+              className="w-full bg-transparent outline-none text-xs uppercase tracking-wider font-bold"
+            />
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Location</label>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input 
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Mumbai, New York" 
-                className="w-full bg-accent/50 border border-border rounded-xl py-2.5 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary transition-all" 
-              />
-            </div>
+          <div className="flex-1 w-full flex items-center gap-3 px-4 h-14 bg-accent/30 rounded-xl border border-transparent focus-within:border-primary/30 transition-all font-mono">
+            <Filter className="w-5 h-5 text-muted-foreground" />
+            <input 
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="LOCATION (E.G. NEW YORK)" 
+              className="w-full bg-transparent outline-none text-xs uppercase tracking-wider font-bold"
+            />
           </div>
-        </div>
-        <button 
-          type="submit"
-          disabled={loading}
-          className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
-        >
-          {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-          {loading ? 'Searching...' : 'Find Leads'}
-        </button>
-      </form>
+          <button 
+            type="submit"
+            disabled={loading}
+            className="w-full md:w-auto px-10 h-14 bg-primary text-primary-foreground rounded-xl font-black text-sm tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 shadow-xl shadow-primary/20"
+          >
+            {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : 'Launch'}
+          </button>
+        </form>
+      </div>
 
       <div className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -413,7 +462,7 @@ function LeadsScreen({
   const [messagingBulk, setMessagingBulk] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'date' | 'score' | 'followers'>('date');
+  const [sortBy, setSortBy] = useState<'date' | 'score' | 'followers' | 'rating'>('date');
   const [scoringBulk, setScoringBulk] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [showTagInput, setShowTagInput] = useState(false);
@@ -425,6 +474,8 @@ function LeadsScreen({
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterScoreMin, setFilterScoreMin] = useState<number>(0);
   const [filterScoreMax, setFilterScoreMax] = useState<number>(100);
+  const [filterCustomField, setFilterCustomField] = useState<string>('all');
+  const [filterCustomValue, setFilterCustomValue] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
 
   const handleImportLeads = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -518,6 +569,13 @@ function LeadsScreen({
       return score >= filterScoreMin && score <= filterScoreMax;
     })
     .filter(l => {
+      if (filterCustomField === 'all') return true;
+      if (!l.customFields) return false;
+      const val = l.customFields[filterCustomField];
+      if (!val) return false;
+      return val.toString().toLowerCase().includes(filterCustomValue.toLowerCase());
+    })
+    .filter(l => {
       const query = searchQuery.toLowerCase();
       return l.name.toLowerCase().includes(query) || 
              l.address.toLowerCase().includes(query) ||
@@ -527,6 +585,7 @@ function LeadsScreen({
     .sort((a, b) => {
       if (sortBy === 'score') return (b.aiScore || 0) - (a.aiScore || 0);
       if (sortBy === 'followers') return (b.userRatingsTotal || 0) - (a.userRatingsTotal || 0);
+      if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
@@ -861,11 +920,11 @@ function LeadsScreen({
           >
             <Filter className="w-4 h-4" />
             Filters
-            {(filterTag !== 'all' || filterCategory !== 'all' || filterScoreMin > 0 || filterScoreMax < 100 || filter !== 'all') && (
+            {(filterTag !== 'all' || filterCategory !== 'all' || filterScoreMin > 0 || filterScoreMax < 100 || filter !== 'all' || filterCustomField !== 'all') && (
               <span className="w-2 h-2 bg-red-500 rounded-full" />
             )}
           </button>
-          {(filterTag !== 'all' || filterCategory !== 'all' || filterScoreMin > 0 || filterScoreMax < 100 || filter !== 'all') && (
+          {(filterTag !== 'all' || filterCategory !== 'all' || filterScoreMin > 0 || filterScoreMax < 100 || filter !== 'all' || filterCustomField !== 'all') && (
             <button 
               onClick={() => {
                 setFilter('all');
@@ -873,6 +932,8 @@ function LeadsScreen({
                 setFilterCategory('all');
                 setFilterScoreMin(0);
                 setFilterScoreMax(100);
+                setFilterCustomField('all');
+                setFilterCustomValue('');
               }}
               className="p-2.5 bg-destructive/10 text-destructive rounded-xl hover:bg-destructive/20 transition-all"
               title="Clear all filters"
@@ -888,7 +949,8 @@ function LeadsScreen({
           >
             <option value="date">Date Added</option>
             <option value="score">AI Score</option>
-            <option value="followers">Reviews</option>
+            <option value="rating">Rating</option>
+            <option value="followers">Reviews count</option>
           </select>
         </div>
       </div>
@@ -901,7 +963,7 @@ function LeadsScreen({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-card border border-border rounded-3xl p-6 shadow-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div className="bg-card border border-border rounded-3xl p-6 shadow-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase text-muted-foreground">Status</label>
                 <select 
@@ -909,7 +971,7 @@ function LeadsScreen({
                   onChange={e => setFilter(e.target.value as any)}
                   className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="all">All Statuses</option>
+                  <option value="all">Statuses</option>
                   <option value="new">New</option>
                   <option value="contacted">Contacted</option>
                   <option value="replied">Replied</option>
@@ -924,7 +986,7 @@ function LeadsScreen({
                   onChange={e => setFilterTag(e.target.value)}
                   className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="all">All Tags</option>
+                  <option value="all">Tags</option>
                   <option value="none">No Tags</option>
                   {allTags.map(tag => (
                     <option key={tag} value={tag}>{tag}</option>
@@ -938,11 +1000,34 @@ function LeadsScreen({
                   onChange={e => setFilterCategory(e.target.value)}
                   className="w-full bg-background border border-border rounded-xl py-2 px-3 text-xs outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="all">All Categories</option>
+                  <option value="all">Categories</option>
                   {allCategories.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase text-muted-foreground">Custom Field</label>
+                <div className="flex flex-col gap-2">
+                  <select 
+                    value={filterCustomField}
+                    onChange={e => setFilterCustomField(e.target.value)}
+                    className="w-full bg-background border border-border rounded-xl py-1.5 px-3 text-[10px] outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="all">Select Field</option>
+                    {profile?.customFieldDefinitions?.map(def => (
+                      <option key={def.id} value={def.id}>{def.label}</option>
+                    ))}
+                  </select>
+                  {filterCustomField !== 'all' && (
+                    <input 
+                      value={filterCustomValue}
+                      onChange={e => setFilterCustomValue(e.target.value)}
+                      placeholder="Value..."
+                      className="w-full bg-background border border-border rounded-xl py-1.5 px-3 text-[10px] outline-none animate-in fade-in"
+                    />
+                  )}
+                </div>
               </div>
               <div className="space-y-2 lg:col-span-2">
                 <label className="text-[10px] font-bold uppercase text-muted-foreground">AI Score Range ({filterScoreMin} - {filterScoreMax})</label>
@@ -970,6 +1055,8 @@ function LeadsScreen({
                       setFilterCategory('all');
                       setFilterScoreMin(0);
                       setFilterScoreMax(100);
+                      setFilterCustomField('all');
+                      setFilterCustomValue('');
                     }}
                     className="text-[10px] font-bold text-primary hover:underline"
                   >
@@ -1591,7 +1678,7 @@ function ChatScreen() {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash-exp",
+        model: "gemini-3-flash-preview",
         contents: [...messages, { role: 'user', text: userMessage }].map(m => ({
           role: m.role,
           parts: [{ text: m.text }]
