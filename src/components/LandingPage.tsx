@@ -1,6 +1,9 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { MapPin, PenTool, Users, ArrowRight, CheckCircle2, Chrome, Zap, Shield, BarChart3 } from 'lucide-react';
+import { 
+  MapPin, PenTool, Users, ArrowRight, CheckCircle2, Chrome, Zap, Shield, 
+  BarChart3, Rocket, LayoutDashboard, ShieldCheck 
+} from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export default function LandingPage({ onGetStarted }: { onGetStarted: () => void }) {
@@ -95,13 +98,13 @@ export default function LandingPage({ onGetStarted }: { onGetStarted: () => void
               {
                 title: 'Lead Discovery',
                 desc: 'Search Google Maps by keywords and location to find local businesses instantly.',
-                icon: MapPin,
+                icon: Rocket,
                 color: 'text-blue-500'
               },
               {
                 title: 'AI Lead Scoring',
                 desc: 'Our AI analyzes ratings, reviews, and categories to find your best prospects.',
-                icon: BarChart3,
+                icon: LayoutDashboard,
                 color: 'text-purple-500'
               },
               {
@@ -117,9 +120,9 @@ export default function LandingPage({ onGetStarted }: { onGetStarted: () => void
                 color: 'text-green-500'
               },
               {
-                title: 'Task Reminders',
-                desc: 'Never miss a follow-up with automated task reminders and notifications.',
-                icon: Zap,
+                title: 'Automated Flow',
+                desc: 'Never miss a follow-up with automated rule-based triggers and notifications.',
+                icon: ShieldCheck,
                 color: 'text-yellow-500'
               },
               {

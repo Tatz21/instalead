@@ -11,11 +11,15 @@ import {
   LayoutDashboard, Users, Search, PenTool, Settings, 
   LogOut, Mail, Lock, Github, Chrome, Plus, Filter, 
   ArrowRight, CheckCircle2, MessageSquare, TrendingUp,
-  Instagram, Copy, RefreshCw, Trash2, Save, MessageCircle, Send,
-  ChevronRight, MoreHorizontal, CheckSquare, Square, Clock, Zap, X, Tag,
-  MapPin, LayoutGrid, List, Globe, Phone, Star, Download, Settings2, HelpCircle
+  Copy, RefreshCw, Trash2, Save, MessageCircle, Send,
+  ChevronRight, MoreHorizontal, CheckSquare, Square, Clock, Zap, X, Tag, Rocket, ShieldCheck,
+  MapPin, LayoutGrid, List, Globe, Phone, Star, Download, Settings2, HelpCircle, Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  Cell, PieChart, Pie, AreaChart, Area 
+} from 'recharts';
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { Toaster, toast } from 'sonner';
 import Papa from 'papaparse';
@@ -62,7 +66,7 @@ function AuthScreen() {
             <MapPin className="text-primary w-7 h-7" />
           </div>
           <div className="flex flex-col text-white">
-            <h1 className="text-xl font-black tracking-widest uppercase italic leading-none">InstaLead</h1>
+            <h1 className="text-xl font-black tracking-widest uppercase italic leading-none">GoogleLead</h1>
             <span className="text-[10px] font-bold text-white/50 tracking-[0.3em] uppercase">Intelligence System</span>
           </div>
         </div>
@@ -96,7 +100,7 @@ function AuthScreen() {
             <div className="w-16 h-16 rounded-2xl bg-primary mx-auto mb-4 flex items-center justify-center shadow-2xl shadow-primary/40">
               <MapPin className="text-primary-foreground w-8 h-8" />
             </div>
-            <h1 className="text-3xl font-black tracking-tighter uppercase italic leading-none">InstaLead</h1>
+            <h1 className="text-3xl font-black tracking-tighter uppercase italic leading-none">GoogleLead</h1>
             <span className="text-[10px] font-bold text-primary tracking-[0.3em] uppercase">Intelligence System</span>
           </div>
 
@@ -161,16 +165,27 @@ function AuthScreen() {
 function DashboardScreen({ leads, tasks, onSelectLead, businessType, offer, customFieldDefinitions }: { leads: Lead[], tasks: Task[], onSelectLead: (lead: Lead) => void, businessType: string, offer: string, customFieldDefinitions?: CustomFieldDefinition[] }) {
   const stats = [
     { label: 'Total Leads', value: leads.length, icon: Users, trend: '+12%', trendUp: true },
-    { label: 'Messages Sent', value: leads.filter(l => l.status !== 'new').length, icon: MessageSquare, trend: '+5%', trendUp: true },
-    { label: 'Conversions', value: leads.filter(l => l.status === 'converted').length, icon: CheckCircle2, trend: '+2%', trendUp: true },
-    { label: 'Response Rate', value: '18%', icon: TrendingUp, trend: '+1%', trendUp: true },
+    { label: 'Extraction Count', value: leads.filter(l => l.status !== 'new').length, icon: Zap, trend: '+5%', trendUp: true },
+    { label: 'Conversion ROI', value: leads.filter(l => l.status === 'converted').length, icon: Rocket, trend: '+2%', trendUp: true },
+    { label: 'Efficiency Index', value: '94%', icon: ShieldCheck, trend: '+1%', trendUp: true },
   ];
 
   return (
     <div className="space-y-8" data-tour="dashboard">
-      <header>
-        <h2 className="text-3xl font-display font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">Welcome back! Here's your outreach overview.</p>
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-1 h-1 bg-primary rounded-full animate-pulse" />
+            <span className="text-[10px] font-mono font-bold text-primary tracking-widest uppercase">System Online</span>
+          </div>
+          <h2 className="text-4xl font-black tracking-tighter uppercase italic">Intelligence Hub<span className="text-primary font-not-italic">.</span></h2>
+          <p className="text-muted-foreground text-sm font-medium opacity-70">Real-time business extraction & outreach metrics.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="px-3 py-1 bg-secondary border border-border rounded-lg font-mono text-[10px] text-muted-foreground uppercase">
+            Last Sync: Just Now
+          </div>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -187,7 +202,71 @@ function DashboardScreen({ leads, tasks, onSelectLead, businessType, offer, cust
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-8">
+          {/* Analytics Section */}
+          <div className="bg-card/50 border border-border rounded-3xl p-6 backdrop-blur-xl">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-primary" />
+                  Conversion Intelligence
+                </h3>
+                <p className="text-xs text-muted-foreground">Statistical breakdown of lead statuses</p>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-primary" />
+                <span className="text-[10px] font-bold uppercase tracking-widest">Live Feed</span>
+              </div>
+            </div>
+            
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={[
+                  { name: 'Mon', leads: 40, conv: 10 },
+                  { name: 'Tue', leads: 30, conv: 15 },
+                  { name: 'Wed', leads: 65, conv: 25 },
+                  { name: 'Thu', leads: 45, conv: 35 },
+                  { name: 'Fri', leads: 90, conv: 45 },
+                  { name: 'Sat', leads: 70, conv: 40 },
+                  { name: 'Sun', leads: 85, conv: 55 },
+                ]}>
+                  <defs>
+                    <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fontWeight: 700, fill: 'var(--color-muted-foreground)' }}
+                  />
+                  <YAxis hide />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'var(--color-card)', 
+                      borderColor: 'var(--color-border)',
+                      borderRadius: '16px',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="leads" 
+                    stroke="var(--color-primary)" 
+                    strokeWidth={4}
+                    fillOpacity={1} 
+                    fill="url(#colorLeads)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-bold">Recent Leads</h3>
             <button className="text-primary text-sm font-bold hover:underline">View All</button>
@@ -204,9 +283,10 @@ function DashboardScreen({ leads, tasks, onSelectLead, businessType, offer, cust
             )}
           </div>
         </div>
+      </div>
 
-        <div className="space-y-6">
-          <div className="space-y-4">
+      <div className="space-y-6">
+        <div className="space-y-4">
             <h3 className="text-xl font-bold flex items-center gap-2">
               <Clock className="w-5 h-5 text-yellow-500" />
               Upcoming Tasks
@@ -420,10 +500,45 @@ function FinderScreen({ onSaveLead, savedNames, businessType, offer }: { onSaveL
               className="px-8 py-3 bg-accent hover:bg-accent/80 text-foreground rounded-xl font-bold transition-all flex items-center gap-2"
             >
               {loadingMore ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-              {loadingMore ? 'Loading More...' : 'Load More Leads'}
+              {loadingMore ? 'Load More Leads' : 'Load More Leads'}
             </button>
           </div>
         )}
+
+        <AnimatePresence>
+          {loading && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="py-20 flex flex-col items-center justify-center relative overflow-hidden"
+            >
+              <div className="relative w-64 h-64 mb-12">
+                <motion.div 
+                  className="absolute inset-0 rounded-full border-2 border-primary/20"
+                  animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.1, 0.3] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <motion.div 
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                    className="w-full h-full rounded-full border-t-4 border-primary shadow-[0_0_20px_rgba(var(--primary),0.5)]"
+                  />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="p-6 bg-primary/10 rounded-full backdrop-blur-3xl">
+                    <Search className="w-12 h-12 text-primary animate-pulse" />
+                  </div>
+                </div>
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-xl font-black tracking-tighter uppercase italic">Neutralizing Leads...</h3>
+                <p className="text-xs font-mono font-bold text-primary animate-pulse tracking-widest">EXTRACTING_GEODATA_FROM_MAPS.SYS</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {results.length === 0 && !loading && (
           <div className="py-20 text-center">
@@ -1071,34 +1186,56 @@ function LeadsScreen({
 
       {selectedIds.size > 0 && (
         <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex flex-col lg:flex-row items-center justify-between gap-4"
+          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="sticky top-4 z-40 bg-zinc-900 text-white border border-white/10 rounded-2xl p-4 flex flex-col lg:flex-row items-center justify-between gap-4 shadow-[0_20px_50px_rgba(0,0,0,0.4)] backdrop-blur-xl"
         >
           <div className="flex items-center gap-4">
-            <div className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
-              Bulk Actions
+            <div className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+              SYSTEM_BULK_MODE
             </div>
-            <p className="text-sm font-bold text-primary">{selectedIds.size} leads selected</p>
+            <p className="text-sm font-black tracking-tight"><span className="text-primary">{selectedIds.size}</span> LEADS_SELECTED</p>
           </div>
           <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2 w-full lg:w-auto">
             {showTagInput ? (
-              <div className="flex items-center gap-2 flex-1 sm:flex-none">
-                <input 
-                  value={tagInput}
-                  onChange={e => setTagInput(e.target.value)}
-                  placeholder="New tag..."
-                  className="bg-background border border-border rounded-xl px-3 py-2 text-xs font-bold outline-none w-full sm:w-32"
-                />
+              <div className="flex items-center gap-2 flex-1 sm:flex-none relative">
+                <div className="relative group/tags">
+                  <input 
+                    value={tagInput}
+                    onChange={e => setTagInput(e.target.value)}
+                    placeholder="ENTER TAG..."
+                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold outline-none w-full sm:w-56 focus:border-primary/50 transition-all font-mono"
+                    onFocus={() => setShowTagInput(true)}
+                  />
+                  {allTags.length > 0 && (
+                    <div className="absolute bottom-full left-0 mb-4 w-full bg-zinc-900 border border-white/10 rounded-2xl shadow-3xl p-3 hidden group-focus-within/tags:block z-50 max-h-60 overflow-y-auto backdrop-blur-2xl">
+                      <p className="text-[10px] font-black uppercase text-white/40 mb-3 px-2 tracking-widest font-mono">Registry</p>
+                      <div className="flex flex-wrap gap-2">
+                        {allTags.map(tag => (
+                          <button
+                            key={tag}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setTagInput(tag);
+                            }}
+                            className="px-3 py-1.5 bg-white/5 hover:bg-primary hover:text-primary-foreground rounded-lg text-[10px] font-black transition-all border border-white/5"
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <button 
                   onClick={handleBulkTag}
-                  className="px-3 py-2 bg-primary text-primary-foreground rounded-xl text-[10px] font-bold hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-[10px] font-black tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-primary/20"
                 >
-                  Apply
+                  EXECUTE
                 </button>
                 <button 
                   onClick={() => setShowTagInput(false)}
-                  className="p-2 bg-accent rounded-xl"
+                  className="p-2.5 bg-white/5 rounded-xl hover:bg-red-500 hover:text-white transition-all border border-white/10"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -1106,45 +1243,45 @@ function LeadsScreen({
             ) : (
               <button 
                 onClick={() => setShowTagInput(true)}
-                className="flex-1 sm:flex-none px-4 py-2 bg-accent text-accent-foreground rounded-xl text-xs font-bold hover:bg-accent/80 transition-all flex items-center justify-center gap-2"
+                className="flex-1 sm:flex-none px-5 py-2.5 bg-white/5 text-white border border-white/10 rounded-xl text-[10px] font-black tracking-widest uppercase hover:bg-white/10 transition-all flex items-center justify-center gap-2"
               >
-                <Tag className="w-3 h-3" />
+                <Tag className="w-3.5 h-3.5 text-primary" />
                 Add Tag
               </button>
             )}
             <select 
               onChange={(e) => handleBulkStatusUpdate(e.target.value as LeadStatus)}
-              className="flex-1 sm:flex-none bg-background border border-border rounded-xl px-3 py-2 text-xs font-bold outline-none"
+              className="flex-1 sm:flex-none bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2.5 text-[10px] font-black tracking-widest uppercase outline-none focus:border-primary/50 transition-all font-mono cursor-pointer"
               defaultValue=""
             >
-              <option value="" disabled>Update Status</option>
-              <option value="new">NEW</option>
-              <option value="contacted">CONTACTED</option>
-              <option value="replied">REPLIED</option>
-              <option value="converted">CONVERTED</option>
-              <option value="lost">LOST</option>
+              <option value="" disabled className="bg-zinc-900">UPDT_STATUS</option>
+              <option value="new" className="bg-zinc-900">NEW_LEAD</option>
+              <option value="contacted" className="bg-zinc-900">CONTACTED</option>
+              <option value="replied" className="bg-zinc-900">REPLIED</option>
+              <option value="converted" className="bg-zinc-900">CONVERTED</option>
+              <option value="lost" className="bg-zinc-900">LOST</option>
             </select>
             <button 
               onClick={handleBulkDelete}
-              className="flex-1 sm:flex-none px-4 py-2 bg-destructive text-destructive-foreground rounded-xl text-xs font-bold hover:bg-destructive/90 transition-all"
+              className="flex-1 sm:flex-none px-5 py-2.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl text-[10px] font-black tracking-widest uppercase hover:bg-red-500 hover:text-white transition-all"
             >
-              Delete Selected
+              PURGE_SELECTED
             </button>
             <button 
               onClick={handleBulkScore}
               disabled={scoringBulk}
-              className="flex-1 sm:flex-none px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              className="flex-1 sm:flex-none px-5 py-2.5 bg-white/5 text-white border border-white/10 rounded-xl text-[10px] font-black tracking-widest uppercase hover:text-primary hover:border-primary/50 transition-all flex items-center justify-center gap-2"
             >
-              {scoringBulk ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
-              {scoringBulk ? 'Scoring...' : 'Score Selected'}
+              {scoringBulk ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 text-primary" />}
+              {scoringBulk ? 'SCORE...' : 'GEN_SCORES'}
             </button>
             <button 
               onClick={handleBulkMessage}
               disabled={messagingBulk}
-              className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              className="flex-1 sm:flex-none px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-[10px] font-black tracking-widest uppercase hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
             >
-              {messagingBulk ? <RefreshCw className="w-3 h-3 animate-spin" /> : <MessageSquare className="w-3 h-3" />}
-              {messagingBulk ? 'Generating...' : 'Bulk Message'}
+              {messagingBulk ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
+              {messagingBulk ? 'GEN...' : 'BULK_WRITE'}
             </button>
           </div>
         </motion.div>
@@ -1684,7 +1821,7 @@ function ChatScreen() {
           parts: [{ text: m.text }]
         })),
         config: {
-          systemInstruction: "You are InstaLead AI Assistant. Help users with Instagram lead generation, outreach strategies, and CRM management. Be professional, helpful, and concise.",
+          systemInstruction: "You are GoogleLead AI Assistant. Help users with Google Maps lead generation, outreach strategies, and CRM management. Be professional, helpful, and concise.",
           thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
         }
       });
@@ -1705,7 +1842,7 @@ function ChatScreen() {
           <MessageCircle className="w-5 h-5 text-primary-foreground" />
         </div>
         <div>
-          <h3 className="font-bold text-sm">InstaLead AI Assistant</h3>
+          <h3 className="font-bold text-sm">GoogleLead AI Assistant</h3>
           <p className="text-[10px] text-muted-foreground">Online | Powered by Gemini 3.1 Pro</p>
         </div>
       </div>
